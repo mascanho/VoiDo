@@ -1,7 +1,8 @@
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
+use ratatui::style::Styled;
 use ratatui::text::Span;
-use ratatui::widgets::TableState;
+use ratatui::widgets::{Padding, TableState};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -39,7 +40,7 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
         .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD))
         .style(Style::default().bg(background).fg(text_primary));
 
-    let area = centered_rect(60, 75, area);
+    let area = centered_rect(100, 100, area);
     f.render_widget(block, area);
 
     let inner_area = area.inner(Margin {
@@ -105,7 +106,7 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
     // Split the inner area to make space for the subtasks
     let layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(5), Constraint::Min(5)].as_ref())
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
         .split(inner_area);
 
     f.render_widget(paragraph, layout[0]);
@@ -119,18 +120,30 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
             Line::from(vec![
                 Span::styled(
                     format!("{}. ", index + 1),
-                    Style::default().fg(text_secondary),
+                    Style::default().fg(Color::Rgb(180, 140, 220)),
                 ),
-                Span::styled(subtask, Style::default().fg(text_primary)),
+                if subtask.status == "Done" || subtask.status == "Completed" {
+                    Span::styled(
+                        subtask.text.as_str(),
+                        Style::default().fg(Color::Rgb(120, 220, 150)),
+                    )
+                    .crossed_out()
+                } else {
+                    Span::styled(subtask.text.as_str(), Style::default().fg(Color::Red))
+                },
             ])
         })
         .collect();
 
+    let title = format!(" Subtasks #{} ", todo.subtasks.len());
+    // add margin to the subtasks paragraph
     let subtasks_paragraph = Paragraph::new(subtask_list)
         .block(
             Block::default()
-                .title("Subtasks")
+                .title(title)
+                .fg(Color::Rgb(180, 140, 220))
                 .borders(Borders::ALL)
+                .padding(Padding::new(1, 1, 0, 1))
                 .style(Style::default().bg(background).fg(text_primary)),
         )
         .wrap(Wrap { trim: true });

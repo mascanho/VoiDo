@@ -3,7 +3,7 @@ use std::error::Error;
 use directories::BaseDirs;
 use rusqlite::{Connection, Result, params};
 
-use crate::arguments::models::Todo;
+use crate::arguments::models::{Subtask, Todo};
 
 pub struct ConfigDir {
     pub config_dir: String,
@@ -11,12 +11,6 @@ pub struct ConfigDir {
 
 pub struct DBtodo {
     pub connection: rusqlite::Connection,
-}
-
-pub struct Subtask {
-    pub todo_id: usize,
-    pub text: String,
-    pub status: String,
 }
 
 impl ConfigDir {
@@ -118,14 +112,11 @@ impl DBtodo {
 
         // Now insert subtasks with the correct todo_id
         for subtask in &todo.subtasks {
-            let subtask_status = "Pending".to_string();
-
             self.connection.execute(
                 "INSERT INTO subtasks (todo_id, text, status) VALUES (?1, ?2, ?3)",
-                params![todo_id, subtask, subtask_status],
+                params![todo_id, &subtask.text, &subtask.status],
             )?;
         }
-
         Ok(())
     }
     // DELETE TODO BASED ON ID
@@ -145,7 +136,6 @@ impl DBtodo {
 
     // SHOW ALL THE TODOS
     pub fn get_todos(&self) -> Result<Vec<Todo>, Box<dyn Error>> {
-        // Fetch all todos
         let mut stmt = self.connection.prepare(
             "SELECT id, priority, topic, text, desc, date_added, due, status, owner FROM todos",
         )?;
@@ -161,7 +151,7 @@ impl DBtodo {
                 due: row.get(6)?,
                 status: row.get(7)?,
                 owner: row.get(8)?,
-                subtasks: Vec::new(), // Initially empty, will be populated later
+                subtasks: Vec::new(),
             })
         })?;
 
@@ -169,21 +159,27 @@ impl DBtodo {
         for todo_result in todos_iter {
             let mut todo = todo_result?;
 
-            // Fetch subtasks
-            let mut stmt_subs = self
+            let mut subtasks_stmt = self
                 .connection
                 .prepare("SELECT text, status FROM subtasks WHERE todo_id = ?")?;
+            let subtasks_iter = subtasks_stmt.query_map(params![todo.id], |row| {
+                Ok(Subtask {
+                    todo_id: todo.id,
+                    text: row.get(0)?,
+                    status: row.get(1)?,
+                })
+            })?;
 
-            let subtasks: Vec<String> = stmt_subs
-                .query_map(params![todo.id], |row| Ok(row.get(0)?))?
-                .collect::<Result<Vec<String>, _>>()?;
+            for subtask_result in subtasks_iter {
+                let subtask = subtask_result?;
+                todo.subtasks.push(subtask);
+            }
 
-            todo.subtasks = subtasks;
             todos.push(todo);
         }
-        println!("Todos: {:#?}", todos);
         Ok(todos)
     }
+
     // UPDATE TODO STATUS
     pub fn update_todo(&self, id: i32, status: Option<String>) -> Result<(), Box<dyn Error>> {
         let changes = self.connection.execute(
@@ -216,7 +212,8 @@ impl DBtodo {
     // CLEAR ALL TODOS FROM DB
     pub fn clear_all_todos(&self) -> Result<(), Box<dyn Error>> {
         let changes = self.connection.execute("DELETE FROM todos", params![])?;
-        if changes > 0 {
+        let changes_sub = self.connection.execute("DELETE FROM subtasks", params![])?;
+        if changes > 0 && changes_sub > 0 {
             println!("✅ All todos cleared successfully!");
         } else {
             println!("❌ No todos found.");

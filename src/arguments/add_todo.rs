@@ -1,5 +1,5 @@
 // In arguments/add_todo.rs
-use crate::database::DBtodo;
+use crate::{arguments::models::Subtask, database::DBtodo};
 use chrono::Local;
 use std::error::Error;
 
@@ -78,6 +78,16 @@ pub fn add_todo(
     // Handle subtasks
 
     println!("Subtasks: {:?}", subtasks);
+
+    // handle subtasks
+    let subtasks = subtasks
+        .into_iter()
+        .map(|text| Subtask {
+            todo_id: 0,
+            text,
+            status: "Pending".to_string(),
+        })
+        .collect::<Vec<Subtask>>();
 
     let db = DBtodo::new()?;
 
