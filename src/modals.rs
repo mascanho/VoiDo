@@ -58,7 +58,7 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
             "PRIORITY: ".fg(text_secondary),
             match todo.priority.to_lowercase().as_str() {
                 "high" => todo.priority.as_str().bold().fg(Color::Rgb(220, 80, 150)), // Pinkish purple
-                "medium" => todo.priority.as_str().bold().fg(Color::Rgb(180, 120, 220)), // Medium purple
+                "medium" => todo.priority.as_str().bold().fg(Color::Rgb(180, 120, 120)), // Medium purple
                 _ => todo.priority.as_str().bold().fg(Color::Rgb(120, 80, 200)), // Deep purple
             },
         ]),

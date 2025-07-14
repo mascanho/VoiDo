@@ -10,7 +10,7 @@ pub fn export_todos() -> Result<(), XlsxError> {
     let todos = db.get_todos().expect("Failed to get todos");
 
     // Create workbook
-    let mut workbook = Workbook::new("todos.xlsx")?;
+    let mut workbook = Workbook::new("VoiDo - Todos Export.xlsx")?;
     let mut worksheet = workbook.add_worksheet(None)?;
 
     // Write headers
@@ -50,7 +50,7 @@ pub fn export_todos() -> Result<(), XlsxError> {
 
     workbook.close()?;
     println!("");
-    println!("🤖 Todos exported to todos.xlsx");
+    println!("🤖 Todos exported to VoiDo - Todos Export.xlsx");
     println!("");
     Ok(())
 }
