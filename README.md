@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/mascanho/rustydo/blob/master/src/images/logo.png" alt="VoiDo Logo" width="200" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin: 20px 0;">
+  <img src="https://github.com/mascanho/VoiDo/blob/main/src/images/logo.png" alt="VoiDo Logo" width="200" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin: 20px 0;">
   <h1>VoiDo</h1>
 </div>
 
@@ -22,7 +22,7 @@ To install VoiDo, you need to have Rust and Cargo installed. If you don't, follo
 Once Rust is set up, clone the repository and install the application:
 
 ```bash
-git clone https://github.com/mascanho/rustydo.git
+git clone https://github.com/mascanho/VoiDo.git
 cd rustydo
 cargo install --path .
 ```
@@ -33,14 +33,16 @@ This will install the `voido` executable in your Cargo bin directory (usually `~
 
 The first time you run `voido`, it will automatically create a `config.toml` file in your system's configuration directory. To use the AI features, you need to add your Google Gemini API key to this file.
 
-1.  **Get your API key**: Obtain your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  **Set the key**: You can set the API key using the following command:
-    ```bash
-    VoiDo -k YOUR_API_KEY
-    # or
-    VoiDo --apikey YOUR_API_KEY
-    ```
-    This will securely save your key to the configuration file.
+1. **Get your API key**: Obtain your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. **Set the key**: You can set the API key using the following command:
+
+   ```bash
+   VoiDo -k YOUR_API_KEY
+   # or
+   VoiDo --apikey YOUR_API_KEY
+   ```
+
+   This will securely save your key to the configuration file.
 
 ## 💻 Usage
 
@@ -55,20 +57,21 @@ voido --list
 ```
 
 **Controls:**
--   **Navigate**: `Up`/`Down` arrow keys or `k`/`j`.
--   **View Details**: `Enter` to open the details modal for the selected todo.
--   **Change Status**:
-    -   `p`: Mark as "Pending".
-    -   `o`: Mark as "Ongoing".
-    -   `f`: Mark as "Done".
--   **Change Priority**:
-    -   `P`: Open the priority menu.
-    -   `L`: Mark as "Low".
-    -   `M`: Mark as "Medium".
-    -   `H`: Mark as "High".
--   **Delete Todo**: `d` to open a confirmation dialog, then `y` to confirm or `n` to cancel.
--   **Close Modals**: `Esc` to close any open modal.
--   **Quit**: `q` to exit the application.
+
+- **Navigate**: `Up`/`Down` arrow keys or `k`/`j`.
+- **View Details**: `Enter` to open the details modal for the selected todo.
+- **Change Status**:
+  - `p`: Mark as "Pending".
+  - `o`: Mark as "Ongoing".
+  - `f`: Mark as "Done".
+- **Change Priority**:
+  - `P`: Open the priority menu.
+  - `L`: Mark as "Low".
+  - `M`: Mark as "Medium".
+  - `H`: Mark as "High".
+- **Delete Todo**: `d` to open a confirmation dialog, then `y` to confirm or `n` to cancel.
+- **Close Modals**: `Esc` to close any open modal.
+- **Quit**: `q` to exit the application.
 
 ### Command-Line Operations
 
@@ -77,6 +80,7 @@ Here are the available command-line options:
 #### 🤖 AI Commands
 
 **Get AI-powered task suggestions:**
+
 ```bash
 voido -A "plan a marketing campaign for a new product launch"
 # or
@@ -84,6 +88,7 @@ voido --prompt "plan a marketing campaign for a new product launch"
 ```
 
 **Set your Gemini API key:**
+
 ```bash
 voido -k YOUR_API_KEY
 # or
@@ -93,11 +98,13 @@ voido --apikey YOUR_API_KEY
 #### ✅ Todo Management
 
 **Add a new todo:**
+
 ```bash
 voido -a "Deploy the new feature to production" -w "Ensure all tests pass" -t "DevOps" -p "High" -o "Alex" -d "2024-12-31"
 # or
 voido --add "Deploy the new feature to production" --desc "Ensure all tests pass" --topic "DevOps" --priority "High" --owner "Alex" --due "2024-12-31"
 ```
+
 - `-a, --add <TEXT>`: The description of the todo. (Required)
 - `-w, --desc <TEXT>`: A more detailed description. (Optional)
 - `-t, --topic <TOPIC>`: A topic for categorization. (Optional)
@@ -106,6 +113,7 @@ voido --add "Deploy the new feature to production" --desc "Ensure all tests pass
 - `-d, --due <DATE>`: A due date for the task. (Optional)
 
 **Delete a todo:**
+
 ```bash
 voido -D <ID>
 # or
@@ -113,14 +121,17 @@ voido --delete <ID>
 ```
 
 **Update a todo's status:**
+
 ```bash
 voido -u <ID> --status "Ongoing"
 # or
 voido --update-id <ID> --status "Ongoing"
 ```
+
 You can also update the `topic`, `priority`, `owner`, and `due` date using the same command.
 
 **Mark a todo as "Done" (shortcut):**
+
 ```bash
 voido -C <ID>
 # or
@@ -128,6 +139,7 @@ voido --done <ID>
 ```
 
 **Clear all todos:**
+
 ```bash
 voido -c
 # or
@@ -135,6 +147,7 @@ voido --clear
 ```
 
 **Flush the database:**
+
 ```bash
 voido -f
 # or
@@ -144,6 +157,7 @@ voido --flush
 #### 📂 Excel Export/Import
 
 **Export all todos to an Excel file:**
+
 ```bash
 voido -E
 # or
@@ -151,6 +165,7 @@ voido --export
 ```
 
 **Import todos from an Excel file:**
+
 ```bash
 voido -I <FILE_PATH>
 # or
@@ -160,6 +175,7 @@ voido --import <FILE_PATH>
 #### ⚙️ Utility
 
 **Print all todos to the console:**
+
 ```bash
 voido -P
 # or
@@ -167,6 +183,7 @@ voido --print
 ```
 
 **Show available arguments:**
+
 ```bash
 voido -s
 # or
@@ -174,6 +191,7 @@ voido --show
 ```
 
 **Get the current version:**
+
 ```bash
 voido -r
 # or
@@ -181,6 +199,7 @@ voido --release
 ```
 
 **Get help:**
+
 ```bash
 voido -h
 # or
