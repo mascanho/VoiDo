@@ -85,11 +85,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             },
             todo.topic.clone().fg(text_primary),
             todo.text.clone().fg(text_secondary),
-            db.get_subtasks(todo.id)
-                .unwrap()
-                .len()
-                .to_string()
-                .fg(text_secondary),
+            todo.subtasks.len().to_string().fg(text_secondary),
             todo.date_added.clone().fg(text_secondary),
             todo.due.clone().fg(text_secondary),
             match todo.status.as_str() {

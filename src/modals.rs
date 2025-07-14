@@ -53,7 +53,6 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
             "ID: ".fg(text_secondary),
             todo.id.to_string().bold().fg(accent),
         ]),
-        Line::from(""),
         Line::from(vec![
             "PRIORITY: ".fg(text_secondary),
             match todo.priority.to_lowercase().as_str() {
@@ -62,17 +61,14 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
                 _ => todo.priority.as_str().bold().fg(Color::Rgb(120, 80, 200)), // Deep purple
             },
         ]),
-        Line::from(""),
         Line::from(vec![
             "Owner: ".fg(text_secondary),
             todo.owner.as_str().bold().fg(accent),
         ]),
-        Line::from(""),
         Line::from(vec![
             "TOPIC: ".fg(text_secondary),
             todo.topic.as_str().bold().fg(accent),
         ]),
-        Line::from(""),
         Line::from(vec![
             "STATUS: ".fg(text_secondary),
             match todo.status.as_str() {
@@ -83,25 +79,22 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
                 _ => todo.status.as_str().bold().fg(accent),
             },
         ]),
-        Line::from(""),
         Line::from(vec![
             "CREATED: ".fg(text_secondary),
             todo.date_added.as_str().bold().fg(text_primary),
         ]),
-        Line::from(""),
         Line::from(vec![
             "DUE: ".fg(text_secondary),
             todo.due.as_str().bold().fg(text_primary),
         ]),
-        Line::from(""),
         Line::from(vec![
             "TODO: ".fg(text_secondary),
             todo.text.as_str().bold().fg(text_primary),
         ]),
-        Line::from(""),
-        Line::from("DESCRIPTION:".fg(text_secondary)),
-        Line::from(""),
-        Line::from(todo.desc.as_str().fg(text_primary)),
+        Line::from(vec![
+            "DESCRIPTION: ".fg(text_secondary),
+            todo.desc.as_str().bold().fg(text_primary),
+        ]),
     ];
 
     // Paragraph with subtle styling
@@ -109,7 +102,40 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
         .wrap(Wrap { trim: true })
         .block(Block::default().style(Style::default().bg(background)));
 
-    f.render_widget(paragraph, inner_area);
+    // Split the inner area to make space for the subtasks
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(5), Constraint::Min(5)].as_ref())
+        .split(inner_area);
+
+    f.render_widget(paragraph, layout[0]);
+
+    // Create a list for subtasks
+    let subtask_list: Vec<Line> = todo
+        .subtasks
+        .iter()
+        .enumerate()
+        .map(|(index, subtask)| {
+            Line::from(vec![
+                Span::styled(
+                    format!("{}. ", index + 1),
+                    Style::default().fg(text_secondary),
+                ),
+                Span::styled(subtask, Style::default().fg(text_primary)),
+            ])
+        })
+        .collect();
+
+    let subtasks_paragraph = Paragraph::new(subtask_list)
+        .block(
+            Block::default()
+                .title("Subtasks")
+                .borders(Borders::ALL)
+                .style(Style::default().bg(background).fg(text_primary)),
+        )
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(subtasks_paragraph, layout[1]);
 }
 
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
