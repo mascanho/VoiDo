@@ -136,6 +136,7 @@ pub fn import_todos(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
             due,
             status,
             owner,
+            subtasks: Vec::new(),
         };
 
         db.add_todo(&todo)?;

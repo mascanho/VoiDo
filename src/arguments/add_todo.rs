@@ -12,6 +12,7 @@ pub fn add_todo(
     ownder: Option<String>,
     due: Option<String>,
     desc: Option<String>,
+    subtasks: Vec<String>,
 ) -> Result<(), Box<dyn Error>> {
     let date_added = Local::now().format("%d-%m-%y").to_string();
     let topic = topic.unwrap_or_else(|| "General".to_string());
@@ -74,6 +75,10 @@ pub fn add_todo(
         .to_string()
         + &desc[1..];
 
+    // Handle subtasks
+
+    println!("Subtasks: {:?}", subtasks);
+
     let db = DBtodo::new()?;
 
     let new_todo = Todo {
@@ -86,6 +91,7 @@ pub fn add_todo(
         due: due_date,
         status: "Pending".to_string(),
         owner,
+        subtasks,
     };
 
     db.add_todo(&new_todo)?;

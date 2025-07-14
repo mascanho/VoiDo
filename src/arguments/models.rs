@@ -11,6 +11,7 @@ pub struct Todo {
     pub status: String,
     pub owner: String,
     pub due: String,
+    pub subtasks: Vec<String>,
 }
 
 #[derive(Debug, Parser)]
@@ -68,7 +69,7 @@ pub struct Cli {
     pub clear: bool,
 
     /// Show all options
-    #[arg(short, long)]
+    #[arg(short = 'S', long)]
     pub show: bool,
 
     /// OWNER NAME
@@ -98,4 +99,8 @@ pub struct Cli {
     // Import todos from Excel file
     #[arg(short = 'I', long, value_name = "FILE")]
     pub import: Option<String>,
+
+    // Pass sub tasks that are part of a todo
+    #[arg(short = 's', long, value_name = "SUB TASKS", requires = "add")]
+    pub sub: Option<Vec<String>>,
 }

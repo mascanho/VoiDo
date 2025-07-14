@@ -360,8 +360,26 @@ async fn main() -> Result<(), io::Error> {
     else if let Some(words) = cli.add {
         let text = words.join(" ");
         let desc = cli.desc.map(|desc| desc.join(" "));
-        match arguments::add_todo::add_todo(text, cli.topic, cli.priority, cli.owner, cli.due, desc)
-        {
+        // get the subtasks that can be a vector of strings
+        // Initialize subtasks vector
+        let mut subtasks = Vec::new();
+
+        // Extract subtasks from the command-line argument
+        if let Some(sub_vec) = cli.sub {
+            for subtask in sub_vec {
+                subtasks.push(subtask);
+            }
+        }
+
+        match arguments::add_todo::add_todo(
+            text,
+            cli.topic,
+            cli.priority,
+            cli.owner,
+            cli.due,
+            desc,
+            subtasks,
+        ) {
             Ok(_) => println!("✅ Todo added successfully!"),
             Err(e) => eprintln!("Error adding todo: {}", e),
         }

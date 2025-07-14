@@ -1,9 +1,9 @@
-use crate::App;
 use crate::arguments::models::Todo;
 use crate::modals::{
     centered_rect, draw_delete_confirmation, draw_main_menu_modal, draw_priority_modal,
     draw_todo_modal,
 };
+use crate::{App, database};
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
 use ratatui::text::Span;
@@ -19,6 +19,8 @@ use ratatui::{
 
 // MAIN UI
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
+    let db = database::DBtodo::new().unwrap();
+
     let area = f.area();
 
     // Elegant purple color palette
@@ -65,7 +67,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 
     // Elegant table header
     let header = Row::new(vec![
-        "ID", "PRIORITY", "TOPIC", "TODO", "CREATED", "DUE DATE", "STATUS", "OWNER",
+        "ID", "PRIORITY", "TOPIC", "TODO", "SUBs", "CREATED", "DUE DATE", "STATUS", "OWNER",
     ])
     .style(Style::default().fg(accent).add_modifier(Modifier::BOLD));
 
@@ -83,6 +85,11 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             },
             todo.topic.clone().fg(text_primary),
             todo.text.clone().fg(text_secondary),
+            db.get_subtasks(todo.id)
+                .unwrap()
+                .len()
+                .to_string()
+                .fg(text_secondary),
             todo.date_added.clone().fg(text_secondary),
             todo.due.clone().fg(text_secondary),
             match todo.status.as_str() {
@@ -107,6 +114,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             Constraint::Min(12),    // PRIORITY
             Constraint::Min(15),    // TOPIC
             Constraint::Fill(35),   // TODO-Text
+            Constraint::Length(8),  //Subtasks
             Constraint::Length(12), // DATE-created
             Constraint::Length(15), // DUE
             Constraint::Min(10),    // STATUS

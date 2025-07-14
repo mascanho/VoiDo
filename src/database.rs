@@ -13,6 +13,12 @@ pub struct DBtodo {
     pub connection: rusqlite::Connection,
 }
 
+pub struct Subtask {
+    pub todo_id: usize,
+    pub text: String,
+    pub status: String,
+}
+
 impl ConfigDir {
     pub fn new() -> ConfigDir {
         let base_dirs = BaseDirs::new().unwrap();
@@ -74,14 +80,27 @@ impl DBtodo {
             [],
         )?;
 
+        // INITIALISE THE SUBTASKS TABLE
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS subtasks (
+                id INTEGER PRIMARY KEY,
+                todo_id INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                status TEXT NOT NULL,
+                FOREIGN KEY (todo_id) REFERENCES todos (id)
+            )",
+            [],
+        )?;
+
         Ok(DBtodo { connection })
     }
 
     /// Adds a new todo to the database (better than standalone function)
     pub fn add_todo(&self, todo: &Todo) -> Result<(), Box<dyn Error>> {
+        // First insert the todo and get its ID
         self.connection.execute(
             "INSERT INTO todos (priority, topic, text, desc, date_added, due, status, owner) 
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 &todo.priority,
                 &todo.topic,
@@ -93,10 +112,22 @@ impl DBtodo {
                 &todo.owner
             ],
         )?;
-        // println!("✅ Todo added successfully!");
+
+        // Get the last inserted row ID (the todo's ID)
+        let todo_id = self.connection.last_insert_rowid();
+
+        // Now insert subtasks with the correct todo_id
+        for subtask in &todo.subtasks {
+            let subtask_status = "Pending".to_string();
+
+            self.connection.execute(
+                "INSERT INTO subtasks (todo_id, text, status) VALUES (?1, ?2, ?3)",
+                params![todo_id, subtask, subtask_status],
+            )?;
+        }
+
         Ok(())
     }
-
     // DELETE TODO BASED ON ID
     pub fn delete_todo(&self, id: i32) -> Result<(), Box<dyn Error>> {
         let changes = self
@@ -114,7 +145,11 @@ impl DBtodo {
 
     // SHOW ALL THE TODOS
     pub fn get_todos(&self) -> Result<Vec<Todo>, Box<dyn Error>> {
-        let mut stmt = self.connection.prepare("SELECT * FROM todos")?;
+        // Fetch all todos
+        let mut stmt = self.connection.prepare(
+            "SELECT id, priority, topic, text, desc, date_added, due, status, owner FROM todos",
+        )?;
+
         let todos_iter = stmt.query_map(params![], |row| {
             Ok(Todo {
                 id: row.get(0)?,
@@ -126,16 +161,29 @@ impl DBtodo {
                 due: row.get(6)?,
                 status: row.get(7)?,
                 owner: row.get(8)?,
+                subtasks: Vec::new(), // Initially empty, will be populated later
             })
         })?;
 
         let mut todos: Vec<Todo> = Vec::new();
-        for todo in todos_iter {
-            todos.push(todo.unwrap());
+        for todo_result in todos_iter {
+            let mut todo = todo_result?;
+
+            // Fetch subtasks
+            let mut stmt_subs = self
+                .connection
+                .prepare("SELECT text, status FROM subtasks WHERE todo_id = ?")?;
+
+            let subtasks: Vec<String> = stmt_subs
+                .query_map(params![todo.id], |row| Ok(row.get(0)?))?
+                .collect::<Result<Vec<String>, _>>()?;
+
+            todo.subtasks = subtasks;
+            todos.push(todo);
         }
+        println!("Todos: {:#?}", todos);
         Ok(todos)
     }
-
     // UPDATE TODO STATUS
     pub fn update_todo(&self, id: i32, status: Option<String>) -> Result<(), Box<dyn Error>> {
         let changes = self.connection.execute(
@@ -215,5 +263,16 @@ impl DBtodo {
         let mut stmt = self.connection.prepare("SELECT apikey FROM model")?;
         let apikey = stmt.query_row(params![], |row| row.get(0))?;
         Ok(apikey)
+    }
+
+    // GET THE SUBTASKS FOR A TODO
+    pub fn get_subtasks(&self, todo_id: usize) -> Result<Vec<String>, Box<dyn Error>> {
+        let mut stmt = self
+            .connection
+            .prepare("SELECT text FROM subtasks WHERE todo_id = ?")?;
+        let subtasks = stmt
+            .query_map(params![todo_id], |row| row.get(0))?
+            .collect::<Result<Vec<String>, _>>()?;
+        Ok(subtasks)
     }
 }
