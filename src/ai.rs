@@ -72,11 +72,15 @@ pub async fn ask_gemini(prompt: String) -> Result<String, Box<dyn std::error::Er
         .iter()
         .map(|todo| {
             format!(
-                "- [{}] {} (Priority: {}, Due: {})",
+                "- [{}] {} (Priority: {}, Due: {}, Description: {}, Subtasks: {:?}, Owner: {}, Topic: {})",
                 if todo.status == "Done" { "x" } else { " " },
                 todo.text,
                 todo.priority,
-                todo.due
+                todo.due,
+                todo.desc,
+                todo.subtasks,
+                todo.owner,
+                todo.topic
             )
         })
         .collect::<Vec<String>>()

@@ -144,6 +144,7 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo, state: &mut ListS
                 .title(title)
                 .fg(Color::Rgb(180, 140, 220))
                 .borders(Borders::ALL)
+                .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD))
                 .padding(Padding::new(1, 1, 0, 1))
                 .style(Style::default().bg(background).fg(text_primary)),
         )

@@ -362,6 +362,18 @@ async fn main() -> Result<(), io::Error> {
                         }
                     }
 
+                    KeyCode::Char('p') => {
+                        if let Some(selected) = app.state.selected() {
+                            if selected < app.todos.len() {
+                                let id = app.todos[selected].id;
+                                let status = "Pending".to_string();
+                                if let Err(e) = app.change_todo_status(id as i32, status) {
+                                    eprintln!("Error updating todo status: {}", e);
+                                }
+                            }
+                        }
+                    }
+
                     // Show main menu modal
                     KeyCode::Char('M') => {
                         app.show_main_menu_modal = true;
@@ -547,3 +559,4 @@ async fn main() -> Result<(), io::Error> {
 
     Ok(())
 }
+

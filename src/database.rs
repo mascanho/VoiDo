@@ -224,6 +224,8 @@ impl DBtodo {
 
     pub fn flush_db(&self) -> Result<(), Box<dyn Error>> {
         let changes = self.connection.execute("DELETE FROM todos", params![])?;
+        // clear subtasks
+        let changes_sub = self.connection.execute("DELETE FROM subtasks", params![])?;
         if changes > 0 {
             println!("");
             println!("✅ All todos cleared successfully!");
