@@ -2,7 +2,7 @@ use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
 use ratatui::style::Styled;
 use ratatui::text::Span;
-use ratatui::widgets::{Padding, TableState};
+use ratatui::widgets::{List, ListItem, ListState, Padding};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -25,7 +25,7 @@ fn dynamic_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
     Rect::new(x, y, width, height)
 }
 
-pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
+pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo, state: &mut ListState) {
     // Elegant purple color palette
     let background = Color::Rgb(25, 15, 30); // Deep purple
     let accent = Color::Rgb(150, 80, 220); // Vibrant purple
@@ -112,12 +112,12 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
     f.render_widget(paragraph, layout[0]);
 
     // Create a list for subtasks
-    let subtask_list: Vec<Line> = todo
+    let subtask_items: Vec<ListItem> = todo
         .subtasks
         .iter()
         .enumerate()
         .map(|(index, subtask)| {
-            Line::from(vec![
+            let line = Line::from(vec![
                 Span::styled(
                     format!("{}. ", index + 1),
                     Style::default().fg(Color::Rgb(180, 140, 220)),
@@ -125,19 +125,20 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
                 if subtask.status == "Done" || subtask.status == "Completed" {
                     Span::styled(
                         subtask.text.as_str(),
-                        Style::default().fg(Color::Rgb(120, 220, 150)),
+                        Style::default()
+                            .fg(Color::Rgb(120, 220, 150))
+                            .add_modifier(Modifier::CROSSED_OUT),
                     )
-                    .crossed_out()
                 } else {
                     Span::styled(subtask.text.as_str(), Style::default().fg(Color::Red))
                 },
-            ])
+            ]);
+            ListItem::new(line)
         })
         .collect();
 
     let title = format!(" Subtasks #{} ", todo.subtasks.len());
-    // add margin to the subtasks paragraph
-    let subtasks_paragraph = Paragraph::new(subtask_list)
+    let subtask_list = List::new(subtask_items)
         .block(
             Block::default()
                 .title(title)
@@ -146,9 +147,16 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo) {
                 .padding(Padding::new(1, 1, 0, 1))
                 .style(Style::default().bg(background).fg(text_primary)),
         )
-        .wrap(Wrap { trim: true });
+        .highlight_style(
+            Style::default()
+                .bg(Color::Rgb(80, 40, 120)) // Dark purple background for selection
+                .add_modifier(Modifier::BOLD),
+        )
+        // .highlight_symbol("|")
+        .repeat_highlight_symbol(true);
 
-    f.render_widget(subtasks_paragraph, layout[1]);
+    // This is the critical change - use render_stateful_widget instead of render_widget
+    f.render_stateful_widget(subtask_list, layout[1], state);
 }
 
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

@@ -9,8 +9,7 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use data::sample_todos;
-use ratatui::prelude::Stylize;
-use ratatui::widgets::TableState;
+use ratatui::widgets::{ListState, TableState};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -42,6 +41,8 @@ pub struct App {
     pub show_delete_confirmation: bool,
     pub show_priority_modal: bool,
     pub show_main_menu_modal: bool,
+    pub subtask_state: ListState,
+    pub selected_subtask: Option<String>,
 }
 
 impl App {
@@ -56,10 +57,48 @@ impl App {
             show_delete_confirmation: false,
             show_priority_modal: false,
             show_main_menu_modal: false,
+            subtask_state: ListState::default(),
+            selected_subtask: None,
         }
     }
 
-    // CHANGE todo Priority
+    // Change subtask status
+    fn change_subtask_status(
+        &mut self,
+        todo_id: i32,
+        subtask_id: i32,
+        status: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let db = database::DBtodo::new()?;
+        db.change_subtask_status(todo_id, subtask_id, status)?;
+        Ok(())
+    }
+
+    // Update TODOS to ensure SYNC with DB
+    pub fn load_todo(&mut self, todo_id: usize) {
+        if let Ok(db) = database::DBtodo::new() {
+            if let Ok(todos) = db.get_todos() {
+                // Update the selected todo
+                if let Some(updated_todo) = todos.iter().find(|t| t.id == todo_id).cloned() {
+                    // Preserve selection state
+                    let prev_selected = self.subtask_state.selected();
+
+                    // Update selected todo
+                    self.selected_todo = Some(updated_todo.clone());
+
+                    // Update the main todos list
+                    if let Some(todo) = self.todos.iter_mut().find(|t| t.id == todo_id) {
+                        *todo = updated_todo;
+                    }
+
+                    // Restore selection
+                    if let Some(selected) = prev_selected {
+                        self.subtask_state.select(Some(selected));
+                    }
+                }
+            }
+        }
+    } // CHANGE todo Priority
     fn change_priority(
         &mut self,
         id: i32,
@@ -208,20 +247,97 @@ async fn main() -> Result<(), io::Error> {
             terminal.draw(|f| draw_ui(f, &mut app))?;
             if let Event::Key(key) = event::read()? {
                 match key.code {
-                    // CHANGE TODO STATUS
-                    KeyCode::Char('p') => {
-                        if let Some(selected) = app.state.selected() {
-                            if selected < app.todos.len() {
-                                let id = app.todos[selected].id;
-                                let status = "Pending".to_string();
-                                if let Err(e) = app.change_todo_status(id as i32, status) {
-                                    eprintln!("Error updating todo status: {}", e);
+                    // Handle subtask navigation
+                    // Only handle subtask navigation when modal is visible
+                    KeyCode::Char('j') | KeyCode::Down if app.show_modal => {
+                        if let Some(selected_todo) = &app.selected_todo {
+                            if let Some(selected) = app.subtask_state.selected() {
+                                if selected + 1 < selected_todo.subtasks.len() {
+                                    app.subtask_state.select(Some(selected + 1));
+                                }
+                            } else if !selected_todo.subtasks.is_empty() {
+                                app.subtask_state.select(Some(0));
+                            }
+                        }
+                    }
+                    KeyCode::Char('k') | KeyCode::Up if app.show_modal => {
+                        if let Some(selected) = app.subtask_state.selected() {
+                            if selected > 0 {
+                                app.subtask_state.select(Some(selected - 1));
+                            }
+                        }
+                    }
+                    KeyCode::Char(' ') if app.show_modal => {
+                        if let Some(selected) = app.subtask_state.selected() {
+                            if let Some(todo) = &mut app.selected_todo {
+                                if selected < todo.subtasks.len() {
+                                    let subtask = &mut todo.subtasks[selected];
+                                    subtask.status = if subtask.status == "Done" {
+                                        "Pending".to_string()
+                                    } else {
+                                        "Done".to_string()
+                                    };
                                 }
                             }
                         }
                     }
 
-                    // set status to done
+                    // CHANGE SUBTASK STATUS
+                    KeyCode::Char('d') if app.show_modal => {
+                        // Early return if no selection or no todo
+                        let Some(selected) = app.subtask_state.selected() else {
+                            continue;
+                        };
+                        let Some(todo) = &app.selected_todo else {
+                            continue;
+                        };
+                        let Some(subtask) = todo.subtasks.get(selected) else {
+                            continue;
+                        };
+
+                        // Prepare update parameters
+                        let todo_id = todo.id;
+                        let subtask_id = subtask.subtask_id;
+
+                        // Determine new status
+                        let new_status = if subtask.status == "Done" {
+                            "Pending".to_string()
+                        } else {
+                            "Done".to_string()
+                        };
+
+                        // Update database
+                        if let Err(e) = app.change_subtask_status(
+                            todo_id as i32,
+                            subtask_id as i32,
+                            new_status.clone(),
+                        ) {
+                            eprintln!("Error updating subtask: {}", e);
+                            continue;
+                        }
+
+                        // Update both in-memory states
+                        if let Some(todo) = &mut app.selected_todo {
+                            if let Some(subtask) = todo.subtasks.get_mut(selected) {
+                                subtask.status = new_status.clone();
+                            }
+                        }
+
+                        // Update the main todos list
+                        if let Some(todo) = app.todos.iter_mut().find(|t| t.id == todo_id) {
+                            if let Some(subtask) = todo
+                                .subtasks
+                                .iter_mut()
+                                .find(|s| s.subtask_id == subtask_id)
+                            {
+                                subtask.status = new_status;
+                            }
+                        }
+
+                        // Force a full refresh from DB to ensure consistency
+                        app.load_todo(todo_id);
+                    }
+                    //////
                     KeyCode::Char('d') => {
                         if let Some(selected) = app.state.selected() {
                             if selected < app.todos.len() {

@@ -17,6 +17,7 @@ pub struct Todo {
 #[derive(Debug, Clone)]
 pub struct Subtask {
     pub todo_id: usize,
+    pub subtask_id: usize,
     pub text: String,
     pub status: String,
 }

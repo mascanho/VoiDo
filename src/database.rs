@@ -77,12 +77,12 @@ impl DBtodo {
         // INITIALISE THE SUBTASKS TABLE
         connection.execute(
             "CREATE TABLE IF NOT EXISTS subtasks (
-                id INTEGER PRIMARY KEY,
-                todo_id INTEGER NOT NULL,
-                text TEXT NOT NULL,
-                status TEXT NOT NULL,
-                FOREIGN KEY (todo_id) REFERENCES todos (id)
-            )",
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               todo_id INTEGER NOT NULL,
+               text TEXT NOT NULL,
+               status TEXT NOT NULL,
+               FOREIGN KEY (todo_id) REFERENCES todos(id)            
+)",
             [],
         )?;
 
@@ -161,12 +161,13 @@ impl DBtodo {
 
             let mut subtasks_stmt = self
                 .connection
-                .prepare("SELECT text, status FROM subtasks WHERE todo_id = ?")?;
+                .prepare("SELECT id, text, status FROM subtasks WHERE todo_id = ?")?;
             let subtasks_iter = subtasks_stmt.query_map(params![todo.id], |row| {
                 Ok(Subtask {
                     todo_id: todo.id,
-                    text: row.get(0)?,
-                    status: row.get(1)?,
+                    subtask_id: row.get(0)?,
+                    text: row.get(1)?,
+                    status: row.get(2)?,
                 })
             })?;
 
@@ -271,5 +272,27 @@ impl DBtodo {
             .query_map(params![todo_id], |row| row.get(0))?
             .collect::<Result<Vec<String>, _>>()?;
         Ok(subtasks)
+    }
+
+    // Change the subtast state
+    pub fn change_subtask_status(
+        &self,
+        todo_id: i32,
+        subtask_id: i32, // <-- Make sure this is passed in
+        status: String,
+    ) -> Result<(), Box<dyn Error>> {
+        let changes = self.connection.execute(
+            "UPDATE subtasks SET status = ? WHERE todo_id = ? AND id = ?",
+            params![status, todo_id, subtask_id],
+        )?;
+        if changes > 0 {
+            return Ok(());
+        } else {
+            println!(
+                "❌ No subtask found with id: {} in todo {}",
+                subtask_id, todo_id
+            );
+        }
+        Ok(())
     }
 }

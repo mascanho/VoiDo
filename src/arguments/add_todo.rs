@@ -83,7 +83,8 @@ pub fn add_todo(
     let subtasks = subtasks
         .into_iter()
         .map(|text| Subtask {
-            todo_id: 0,
+            todo_id: 0,    // Add now but the DB will automatically add it
+            subtask_id: 0, // Add now but the DB will automatically add
             text,
             status: "Pending".to_string(),
         })

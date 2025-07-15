@@ -7,7 +7,6 @@ use crate::{App, database};
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
 use ratatui::text::Span;
-use ratatui::widgets::{Padding, TableState};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -51,7 +50,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 
     // show deletion modal for selected todo
     if app.show_modal {
-        draw_todo_modal(f, area, app.selected_todo.as_ref().unwrap());
+        draw_todo_modal(
+            f,
+            area,
+            app.selected_todo.as_ref().unwrap(),
+            &mut app.subtask_state,
+        );
         return;
     }
 
