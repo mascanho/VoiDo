@@ -406,8 +406,8 @@ async fn main() -> Result<(), io::Error> {
                     }
 
                     // Delete todo
-                    KeyCode::Delete => {
-                        if !app.todos.is_empty() {
+                    KeyCode::Delete | KeyCode::Char('x') => {
+                        if !app.todos.is_empty() && !app.show_modal {
                             app.show_delete_confirmation = true;
                         }
                     }

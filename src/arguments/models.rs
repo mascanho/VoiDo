@@ -113,7 +113,7 @@ pub struct Cli {
     pub sub: Option<Vec<String>>,
 
     #[arg(
-        short = 'S',
+        short = 'T',
         long = "subtask",
         value_name = "ID:TEXT",
         value_parser = parse_subtask,
