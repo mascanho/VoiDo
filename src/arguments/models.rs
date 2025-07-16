@@ -111,4 +111,24 @@ pub struct Cli {
     // Pass sub tasks that are part of a todo
     #[arg(short = 's', long, value_name = "SUB TASKS", requires = "add")]
     pub sub: Option<Vec<String>>,
+
+    /// Subtasks for a todo (requires --add)
+    #[arg(
+        short = 'T',  // Changed from `-S` to avoid conflict
+        long = "subtask",
+        value_name = "ID:TEXT",
+        value_parser = parse_subtask,
+        help = "Add a subtask in the format `ID:TEXT` (e.g., `-T 2:\"my task\"`)"
+    )]
+    pub subtasks: Vec<(i32, String)>,
+}
+
+// Parses a string in the format `ID:TEXT` into `(i32, String)`
+fn parse_subtask(s: &str) -> Result<(i32, String), String> {
+    let Some((id_part, text_part)) = s.split_once(':') else {
+        return Err("Expected format `ID:TEXT`".to_string());
+    };
+    let id = id_part.parse().map_err(|_| "ID must be a number")?;
+    let text = text_part.trim_matches('"').to_string();
+    Ok((id, text))
 }

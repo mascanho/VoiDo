@@ -451,6 +451,15 @@ async fn main() -> Result<(), io::Error> {
         )?;
         terminal.show_cursor()?;
     }
+    // Append subtask to already existing TODO
+    else if !cli.subtasks.is_empty() {
+        for (id, text) in &cli.subtasks {
+            match arguments::add_todo::append_subtask(*id, text.clone()) {
+                Ok(_) => println!("✅ Subtask {}: '{}' added successfully!", id, text),
+                Err(e) => eprintln!("Error adding subtask {}: {}", id, e),
+            }
+        }
+    }
     // Import todos from excel file
     else if let Some(file_path) = cli.import {
         let _workbook = xls::import_todos(&file_path);
@@ -559,4 +568,3 @@ async fn main() -> Result<(), io::Error> {
 
     Ok(())
 }
-

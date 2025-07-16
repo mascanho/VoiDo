@@ -108,3 +108,10 @@ pub fn add_todo(
     db.add_todo(&new_todo)?;
     Ok(())
 }
+
+// Append subtasks to already exisintg TODO
+pub fn append_subtask(id: i32, subtask: String) -> Result<(), Box<dyn Error>> {
+    let db = DBtodo::new()?;
+    db.append_subtask(id, subtask)?;
+    Ok(())
+}

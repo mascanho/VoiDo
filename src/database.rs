@@ -297,4 +297,18 @@ impl DBtodo {
         }
         Ok(())
     }
+
+    // Add subtask to TASK with ID
+    pub fn append_subtask(&self, todo_id: i32, subtask: String) -> Result<(), Box<dyn Error>> {
+        let changes = self.connection.execute(
+            "INSERT INTO subtasks (todo_id, text, status) VALUES (?, ?, ?)",
+            params![todo_id, subtask, "Pending"],
+        )?;
+        if changes > 0 {
+            println!("✅ Subtask added successfully!");
+        } else {
+            println!("❌ No todo found with id: {}", todo_id);
+        }
+        Ok(())
+    }
 }
