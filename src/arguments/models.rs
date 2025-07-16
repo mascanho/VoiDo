@@ -112,9 +112,8 @@ pub struct Cli {
     #[arg(short = 's', long, value_name = "SUB TASKS", requires = "add")]
     pub sub: Option<Vec<String>>,
 
-    /// Subtasks for a todo (requires --add)
     #[arg(
-        short = 'T',  // Changed from `-S` to avoid conflict
+        short = 'S',
         long = "subtask",
         value_name = "ID:TEXT",
         value_parser = parse_subtask,
