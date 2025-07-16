@@ -230,3 +230,9 @@ Contributions are welcome! If you have ideas for new features or find a bug, ple
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+## 📝 TODO/ROADMAP
+
+- [ ] Offline Sync
+- [ ] Markdown Support
+- [ ] GUI Client
