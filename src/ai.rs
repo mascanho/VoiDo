@@ -41,6 +41,9 @@ struct GeminiResponse {
 }
 
 pub async fn ask_gemini(prompt: String) -> Result<String, Box<dyn std::error::Error>> {
+    println!("");
+    println!("Checking VoiDo collections...");
+
     // Get database connection
     let db =
         database::DBtodo::new().map_err(|e| format!("Failed to connect to database: {}", e))?;

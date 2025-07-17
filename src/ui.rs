@@ -84,7 +84,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
                 "medium" | "Medium" | "MEDIUM" => {
                     todo.priority.clone().fg(Color::Rgb(180, 120, 120))
                 } // Medium Yellow
-                "low" | "Low" | "LOW" => todo.priority.clone().fg(Color::Rgb(120, 80, 200)), // Deep purple
+                "low" | "Low" | "LOW" => todo.priority.clone().fg(Color::Rgb(120, 220, 150)), // Soft Green
                 _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)), // Deep purple
             },
             todo.topic.clone().fg(text_primary),
