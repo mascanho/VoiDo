@@ -89,6 +89,15 @@ impl DBtodo {
         Ok(DBtodo { connection })
     }
 
+    // Delete the selected subtask
+    pub fn delete_subtask(&self, id: i32) -> Result<(), Box<dyn Error>> {
+        let db = DBtodo::new().unwrap();
+        db.connection
+            .execute("DELETE FROM subtasks WHERE id = ?", params![id])
+            .unwrap();
+        Ok(())
+    }
+
     /// Adds a new todo to the database (better than standalone function)
     pub fn add_todo(&self, todo: &Todo) -> Result<(), Box<dyn Error>> {
         // First insert the todo and get its ID

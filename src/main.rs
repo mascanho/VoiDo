@@ -158,6 +158,7 @@ impl App {
         Ok(())
     }
 
+    // Delete current selected TODO
     fn delete_current_todo(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(selected) = self.state.selected() {
             if selected < self.todos.len() {
@@ -173,6 +174,34 @@ impl App {
                     self.state.select(Some(selected.min(self.todos.len() - 1)));
                 } else {
                     self.state.select(None);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // Delete current TODO subtask
+    fn delete_current_subtask(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(selected) = self.subtask_state.selected() {
+            if selected < self.selected_todo.as_ref().unwrap().subtasks.len() {
+                let id = self.selected_todo.as_ref().unwrap().subtasks[selected].subtask_id;
+                let db = database::DBtodo::new()?;
+                db.delete_subtask(id as i32)?;
+
+                // Update local state
+                self.selected_todo
+                    .as_mut()
+                    .unwrap()
+                    .subtasks
+                    .remove(selected);
+
+                // Adjust selection
+                if !self.selected_todo.as_ref().unwrap().subtasks.is_empty() {
+                    self.subtask_state.select(Some(
+                        selected.min(self.selected_todo.as_ref().unwrap().subtasks.len() - 1),
+                    ));
+                } else {
+                    self.subtask_state.select(None);
                 }
             }
         }
@@ -409,6 +438,14 @@ async fn main() -> Result<(), io::Error> {
                     KeyCode::Delete | KeyCode::Char('x') => {
                         if !app.todos.is_empty() && !app.show_modal {
                             app.show_delete_confirmation = true;
+                        }
+
+                        // IF THE TODO MODAL IS SHOWING THE SUBTASKS
+                        if app.show_modal {
+                            // Execute the delete action on the subtasks only
+                            if let Err(e) = app.delete_current_subtask() {
+                                eprintln!("Error deleting subtask: {}", e);
+                            }
                         }
                     }
 

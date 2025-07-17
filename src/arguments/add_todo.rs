@@ -19,11 +19,11 @@ pub fn add_todo(
 
     // handle priority
     let priority = priority.unwrap_or_else(|| "normal".to_string());
-    if priority != "normal" && priority != "high" && priority != "low" && priority != "medium" {
-        return Err("Priority must be 'medium', 'high', or 'low'.".into());
-    }
     let priority = priority.to_lowercase();
     // Uppercase only the first letter
+    if priority != "low" && priority != "medium" && priority != "high" {
+        return Err("Priority must be 'medium', 'high', or 'low'.".into());
+    }
     let priority = priority
         .chars()
         .next()
