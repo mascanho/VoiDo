@@ -65,7 +65,6 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 
     // Create search block once and reuse reference
     let search_block = Block::default()
-        .borders(Borders::ALL)
         .border_style(Style::default().fg(border))
         .style(Style::default().bg(background));
 

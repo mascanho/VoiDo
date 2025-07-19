@@ -23,17 +23,19 @@ impl InputField {
         Self {
             value: String::new(),
             cursor_position: 0,
-            active: false,
+            active: true,
             title: title.to_string(),
             background: Color::Rgb(30, 15, 35),
             border_color: Color::Rgb(200, 100, 220),
-            text_color: Color::Rgb(230, 220, 240),
+            text_color: Color::White,
         }
     }
 
     pub fn render(&mut self, f: &mut Frame, area: Rect) {
+        // Add Borders::ALL to make the input field visible and interactive
         let input_block = Block::default()
             .title(self.title.as_str())
+            .borders(Borders::ALL) // This was missing
             .style(Style::default().bg(self.background))
             .border_style(Style::default().fg(if self.active {
                 self.border_color
@@ -61,7 +63,6 @@ impl InputField {
         }
     }
 
-    //
     pub fn handle_event(&mut self, event: &Event) -> bool {
         if !self.active {
             return false;
@@ -105,6 +106,14 @@ impl InputField {
                 }
                 KeyCode::End => {
                     self.cursor_position = self.value.len();
+                    return true;
+                }
+                KeyCode::Enter => {
+                    // Handle enter key if needed
+                    return true;
+                }
+                KeyCode::Esc => {
+                    // Handle escape key if needed
                     return true;
                 }
                 _ => {}
