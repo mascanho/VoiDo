@@ -249,6 +249,7 @@ impl App {
         self.show_modal = false;
         self.selected_todo = None;
         self.show_priority_modal = false;
+        self.show_main_menu_modal = false;
     }
 }
 
@@ -411,6 +412,7 @@ async fn main() -> Result<(), io::Error> {
                     // SHOW PRIORITY MODAL
                     KeyCode::Char('P') => {
                         if let Some(selected) = app.state.selected() {
+                            app.close_modal();
                             if selected < app.todos.len() {
                                 app.show_priority_modal = true;
                             }
@@ -464,14 +466,14 @@ async fn main() -> Result<(), io::Error> {
                     KeyCode::Down | KeyCode::Char('j') => app.next(),
                     KeyCode::Up | KeyCode::Char('k') => app.previous(),
                     KeyCode::Enter | KeyCode::Char('l') => {
-                        if app.show_modal {
+                        if app.show_modal || app.show_main_menu_modal {
                             app.close_modal();
                         } else {
                             app.select_current();
                         }
                     }
                     KeyCode::Esc | KeyCode::Char('h') => {
-                        if app.show_modal || app.show_priority_modal {
+                        if app.show_modal || app.show_priority_modal || app.show_main_menu_modal {
                             app.close_modal();
                         }
                     }

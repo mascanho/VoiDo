@@ -304,7 +304,7 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
     let text_secondary = Color::Rgb(200, 180, 220);
 
     // Calculate dynamic size (40% of width, 25% of height)
-    let modal_area = dynamic_rect(40, 25, area);
+    let modal_area = dynamic_rect(100, 100, area);
 
     let block = Block::default()
         .title(" Main Menu ")
@@ -321,6 +321,26 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
     });
 
     let text = vec![
+        // TODO: New menu entries go here.
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(
+                "A",
+                Style::default()
+                    .fg(Color::Rgb(220, 100, 120))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::from(": Add Todo".fg(text_secondary)),
+        ]),
+        Line::from(vec![
+            Span::styled(
+                "D",
+                Style::default()
+                    .fg(Color::Rgb(220, 100, 120))
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::from(": Delete Todo".fg(text_secondary)),
+        ]),
         Line::from(""),
         Line::from(""),
         Line::from(vec![
@@ -334,12 +354,12 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled(
-                "M",
+                "P",
                 Style::default()
                     .fg(Color::Rgb(220, 180, 100))
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::from(": Medium priority".fg(text_secondary)),
+            Span::from(": Change Priority".fg(text_secondary)),
         ]),
         Line::from(vec![
             Span::styled(
