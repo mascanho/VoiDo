@@ -18,6 +18,7 @@ use ratatui::{
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
 };
+use search::InputField;
 use std::io;
 use ui::{calculate_stats, draw_ui};
 
@@ -29,8 +30,15 @@ mod configs;
 mod data; // DATABASE STUFF;
 mod database;
 mod modals; // All the modals logic
+mod search;
 mod ui; // ALL THE UI STUFF
-mod xls;
+mod xls; // Fuzy serach and UI input logic
+
+#[derive(Debug)]
+pub enum InputMode {
+    Normal,
+    Search,
+}
 
 #[derive(Debug)]
 pub struct App {
@@ -43,6 +51,9 @@ pub struct App {
     pub show_main_menu_modal: bool,
     pub subtask_state: ListState,
     pub selected_subtask: Option<String>,
+    pub show_search_input: bool,
+    pub input_mode: InputMode,
+    pub search_input: InputField,
 }
 
 impl App {
@@ -59,6 +70,9 @@ impl App {
             show_main_menu_modal: false,
             subtask_state: ListState::default(),
             selected_subtask: None,
+            show_search_input: true,
+            search_input: InputField::new("Search"),
+            input_mode: InputMode::Normal,
         }
     }
 

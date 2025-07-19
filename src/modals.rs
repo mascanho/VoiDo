@@ -15,7 +15,7 @@ use ratatui::{
 use crate::arguments::models::Todo;
 
 // Dynamic sizing helper function
-fn dynamic_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
+pub fn dynamic_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
     let width = (area.width * width_percent / 100).max(10); // Ensure minimum width
     let height = (area.height * height_percent / 100).max(8); // Ensure minimum height
 
@@ -294,88 +294,87 @@ pub fn draw_priority_modal(f: &mut Frame, area: Rect) {
 
     f.render_widget(paragraph, inner_area);
 }
-
+//
 // MAIN MODAL MENU
 pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
-    // Purple-themed delete confirmation
+    // Theme colors
     let background = Color::Rgb(30, 15, 35);
-    let border = Color::Rgb(200, 100, 220);
+    let border_color = Color::Rgb(200, 100, 220);
     let text_primary = Color::Rgb(230, 220, 240);
     let text_secondary = Color::Rgb(200, 180, 220);
+    let key_color = Color::Rgb(220, 180, 100);
 
-    // Calculate dynamic size (40% of width, 25% of height)
-    let modal_area = dynamic_rect(100, 100, area);
+    // Modal dimensions
+    let modal_area = dynamic_rect(80, 70, area);
 
+    // Main block for the modal
     let block = Block::default()
-        .title(" Main Menu ")
+        .title(" VoiDo Menu ")
         .borders(Borders::ALL)
         .style(Style::default().bg(background))
-        .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD));
-
+        .border_style(
+            Style::default()
+                .fg(border_color)
+                .add_modifier(Modifier::BOLD),
+        );
     f.render_widget(block, modal_area);
 
-    // Inner area with padding
+    // Inner layout for content
     let inner_area = modal_area.inner(Margin {
-        horizontal: 2,
-        vertical: 1,
+        horizontal: 4,
+        vertical: 2,
     });
 
-    let text = vec![
-        // TODO: New menu entries go here.
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "A",
-                Style::default()
-                    .fg(Color::Rgb(220, 100, 120))
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::from(": Add Todo".fg(text_secondary)),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "D",
-                Style::default()
-                    .fg(Color::Rgb(220, 100, 120))
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::from(": Delete Todo".fg(text_secondary)),
-        ]),
-        Line::from(""),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "E",
-                Style::default()
-                    .fg(Color::Rgb(220, 100, 120))
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::from(": Export Todos to .xls".fg(text_secondary)),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "P",
-                Style::default()
-                    .fg(Color::Rgb(220, 180, 100))
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::from(": Change Priority".fg(text_secondary)),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "L",
-                Style::default()
-                    .fg(Color::Rgb(120, 220, 150))
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::from(": Low priority".fg(text_secondary)),
-        ]),
+    // Keybindings data
+    let keybindings = vec![
+        ("Up/Down", "Navigate through the list of TODOs"),
+        ("Enter", "Show detailed view of the selected TODO"),
+        ("Delete / x", "Delete the selected TODO"),
+        ("d", "Mark the selected TODO as 'Done'"),
+        ("p", "Mark the selected TODO as 'Pending'"),
+        ("o", "Mark the selected TODO as 'Ongoing'"),
+        ("P", "Change the priority of the selected TODO"),
+        ("M", "Toggle this main menu"),
+        ("q", "Quit the application"),
+        ("A", "Add a new TODO"),
+        ("E", "Export all TODOs to an Excel file"),
+        ("Y", "Confirm an action (e.g., deletion)"),
+        ("N", "Cancel an action"),
     ];
 
-    let paragraph = Paragraph::new(text)
-        .alignment(Alignment::Left)
-        .wrap(Wrap { trim: true })
-        .block(Block::default().style(Style::default().bg(background)));
+    // Create rows for the table
+    let rows: Vec<Row> = keybindings
+        .iter()
+        .map(|(key, desc)| {
+            Row::new(vec![
+                Span::styled(
+                    *key,
+                    Style::default().fg(key_color).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(*desc, Style::default().fg(text_secondary)),
+            ])
+        })
+        .collect();
 
-    f.render_widget(paragraph, inner_area);
+    // Create the table
+    let table = Table::new(
+        rows,
+        [
+            // Constraint for key column
+            Constraint::Length(10),
+            // Constraint for description column
+            Constraint::Fill(1),
+        ],
+    )
+    .block(
+        Block::default()
+            .title("Keybindings")
+            .borders(Borders::NONE)
+            .style(Style::default().fg(text_primary)),
+    )
+    .column_spacing(3);
+
+    // Render the table
+    f.render_widget(table, inner_area);
 }
+

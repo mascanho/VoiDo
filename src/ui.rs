@@ -3,6 +3,7 @@ use crate::modals::{
     centered_rect, draw_delete_confirmation, draw_main_menu_modal, draw_priority_modal,
     draw_todo_modal,
 };
+use crate::search::InputField;
 use crate::{App, database};
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
@@ -18,37 +19,29 @@ use ratatui::{
 
 // MAIN UI
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
-    let db = database::DBtodo::new().unwrap();
+    let area = f.size();
 
-    let area = f.area();
+    // Color palette
+    let background = Color::Rgb(25, 15, 30);
+    let accent = Color::Rgb(150, 80, 220);
+    let border = Color::Rgb(180, 140, 220);
+    let text_primary = Color::Rgb(230, 220, 240);
+    let text_secondary = Color::Rgb(200, 180, 220);
+    let highlight = Color::Rgb(50, 30, 60);
 
-    // Elegant purple color palette
-    let background = Color::Rgb(25, 15, 30); // Deep purple
-    let accent = Color::Rgb(150, 80, 220); // Vibrant purple
-    let border = Color::Rgb(180, 140, 220); // Soft lavender
-    let text_primary = Color::Rgb(230, 220, 240); // Light lavender
-    let text_secondary = Color::Rgb(200, 180, 220); // Muted lavender
-    let highlight = Color::Rgb(50, 30, 60); // Darker purple
-
-    // Handle modal and delete confirmation states first
+    // Handle modal states first
     if app.show_delete_confirmation {
         draw_delete_confirmation(f, area);
         return;
     }
-
-    // Show main menu modal
     if app.show_main_menu_modal {
         draw_main_menu_modal(f, area);
         return;
     }
-
-    // Show priority modal
     if app.show_priority_modal {
         draw_priority_modal(f, area);
         return;
     }
-
-    // show deletion modal for selected todo
     if app.show_modal {
         draw_todo_modal(
             f,
@@ -59,33 +52,36 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         return;
     }
 
-    // Main table view layout
+    // Main layout with fixed search bar
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(1),    // Main table area
-            Constraint::Length(3), // Stats area
-            Constraint::Length(1), // Shortcuts area
+            Constraint::Length(3), // Search bar
+            Constraint::Min(1),    // Table
+            Constraint::Length(3), // Stats
+            Constraint::Length(1), // Shortcuts
         ])
         .split(area);
 
-    // Elegant table header
-    let header = Row::new(vec![
-        "ID", "PRIORITY", "TOPIC", "TODO", "SUBs", "CREATED", "DUE DATE", "STATUS", "OWNER",
-    ])
-    .style(Style::default().fg(accent).add_modifier(Modifier::BOLD));
+    // Create search block once and reuse reference
+    let search_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(border))
+        .style(Style::default().bg(background));
 
-    // Table rows with status-based coloring
+    // Render search area (pass reference)
+    f.render_widget(&search_block, layout[0]);
+    app.search_input.render(f, search_block.inner(layout[0]));
+
+    // Prepare table rows
     let rows = app.todos.iter().map(|todo| {
         Row::new(vec![
             todo.id.to_string().fg(text_primary),
             match todo.priority.to_lowercase().as_str() {
-                "high" | "High" | "HIGH" => todo.priority.clone().fg(Color::Rgb(220, 80, 150)), // Pinkish purple
-                "medium" | "Medium" | "MEDIUM" => {
-                    todo.priority.clone().fg(Color::Rgb(180, 120, 120))
-                } // Medium Yellow
-                "low" | "Low" | "LOW" => todo.priority.clone().fg(Color::Rgb(120, 220, 150)), // Soft Green
-                _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)), // Deep purple
+                "high" => todo.priority.clone().fg(Color::Rgb(220, 80, 150)),
+                "medium" => todo.priority.clone().fg(Color::Rgb(180, 120, 120)),
+                "low" => todo.priority.clone().fg(Color::Rgb(120, 220, 150)),
+                _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)),
             },
             todo.topic.clone().fg(text_primary),
             todo.text.clone().fg(text_secondary),
@@ -93,35 +89,40 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             todo.date_added.clone().fg(text_secondary),
             todo.due.clone().fg(text_secondary),
             match todo.status.as_str() {
-                "Done" | "Completed" => todo.status.clone().fg(Color::Rgb(120, 220, 150)), // Soft green
-                "Ongoing" => todo.status.clone().fg(Color::Rgb(220, 180, 100)),            // Amber
+                "Done" | "Completed" => todo.status.clone().fg(Color::Rgb(120, 220, 150)),
+                "Ongoing" => todo.status.clone().fg(Color::Rgb(220, 180, 100)),
                 "Planned" => todo.status.clone().fg(accent),
-                "Pending" => todo.status.clone().fg(Color::Rgb(220, 100, 120)), // Soft red
+                "Pending" => todo.status.clone().fg(Color::Rgb(220, 100, 120)),
                 _ => todo.status.clone().fg(text_primary),
             },
             todo.owner
                 .clone()
                 .fg(text_primary)
-                .style(Style::default().add_modifier(Modifier::ITALIC)),
+                .add_modifier(Modifier::ITALIC),
         ])
     });
 
-    // Elegant table styling
+    // Create and render table
     let table = Table::new(
-        rows.collect::<Vec<_>>(),
-        vec![
+        rows,
+        [
             Constraint::Length(5),  // ID
             Constraint::Min(12),    // PRIORITY
             Constraint::Min(15),    // TOPIC
-            Constraint::Fill(35),   // TODO-Text
-            Constraint::Length(8),  //Subtasks
-            Constraint::Length(12), // DATE-created
+            Constraint::Fill(35),   // TODO
+            Constraint::Length(8),  // SUBs
+            Constraint::Length(12), // CREATED
             Constraint::Length(15), // DUE
             Constraint::Min(10),    // STATUS
-            Constraint::Min(10),    // Owner
+            Constraint::Min(10),    // OWNER
         ],
     )
-    .header(header)
+    .header(
+        Row::new(vec![
+            "ID", "PRIORITY", "TOPIC", "TODO", "SUBs", "CREATED", "DUE DATE", "STATUS", "OWNER",
+        ])
+        .style(Style::default().fg(accent).add_modifier(Modifier::BOLD)),
+    )
     .block(
         Block::default()
             .title(" VoiDo ")
@@ -133,99 +134,63 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
     .row_highlight_style(
         Style::default()
             .bg(Color::Rgb(120, 80, 190))
-            .fg(Color::Rgb(255, 255, 255)),
+            .fg(Color::White),
     )
     .column_spacing(1);
 
-    f.render_stateful_widget(table, layout[0], &mut app.state);
+    f.render_stateful_widget(table, layout[1], &mut app.state);
 
-    // Stats with elegant styling
-    let stats_spans = calculate_stats(&app.todos);
-    let status_line = Paragraph::new(Line::from(stats_spans)).block(
+    // Stats area
+    let stats = calculate_stats(&app.todos);
+    let stats_widget = Paragraph::new(stats).block(
         Block::default()
             .border_style(Style::default().fg(border))
             .style(Style::default().bg(background)),
     );
+    f.render_widget(stats_widget, layout[2]);
 
-    f.render_widget(status_line, layout[1]);
-
-    // Shortcuts with consistent styling
-    let shortcuts = Paragraph::new(get_shortcuts_text())
+    // Shortcuts area
+    let shortcuts = get_shortcuts_text();
+    let shortcuts_widget = Paragraph::new(shortcuts)
         .style(Style::default().fg(text_secondary))
         .block(Block::default().style(Style::default().bg(background)));
-
-    f.render_widget(shortcuts, layout[2]);
+    f.render_widget(shortcuts_widget, layout[3]);
 }
 
-pub fn calculate_stats(todos: &[Todo]) -> Vec<Span<'static>> {
+pub fn calculate_stats(todos: &[Todo]) -> Line {
     let done = todos.iter().filter(|t| t.status == "Done").count();
     let ongoing = todos.iter().filter(|t| t.status == "Ongoing").count();
-    // let planned = todos.iter().filter(|t| t.status == "Planned").count();
     let pending = todos.iter().filter(|t| t.status == "Pending").count();
 
-    vec![
-        Span::raw(" "),
-        Span::raw("TOTAL: "),
+    Line::from(vec![
+        Span::raw(" TOTAL: "),
         Span::styled(
             todos.len().to_string(),
-            Style::default().fg(Color::Rgb(150, 80, 220)), // Purple
+            Style::default().fg(Color::Rgb(150, 80, 220)),
         ),
         Span::raw(" | Done: "),
         Span::styled(
             done.to_string(),
-            Style::default().fg(Color::Rgb(120, 220, 150)), // Green
+            Style::default().fg(Color::Rgb(120, 220, 150)),
         ),
         Span::raw(" | ONGOING: "),
         Span::styled(
             ongoing.to_string(),
-            Style::default().fg(Color::Rgb(220, 180, 100)), // Amber
+            Style::default().fg(Color::Rgb(220, 180, 100)),
         ),
-        // Span::raw(" | PLANNED: "),
-        // Span::styled(
-        //     planned.to_string(),
-        //     Style::default().fg(Color::Rgb(180, 140, 220)), // Lavender
-        // ),
         Span::raw(" | PENDING: "),
         Span::styled(
             pending.to_string(),
-            Style::default().fg(Color::Rgb(220, 100, 120)), // Red
+            Style::default().fg(Color::Rgb(220, 100, 120)),
         ),
-    ]
+    ])
 }
 
-// KEYWBOARD SHORTCUTS
 fn get_shortcuts_text() -> Line<'static> {
     Line::from(vec![
-        " ".into(),
-        "[ ".into(),
-        "↑/↓: Navigate".into(),
-        " ]".into(),
-        " ".into(),
-        "[ ".into(),
-        "Enter: Details".into(),
-        " ]".into(),
-        " ".into(),
-        "[ ".into(),
-        "delete: Delete".into(),
-        " ]".into(),
-        " ".into(),
-        "[ ".into(),
-        "d: Done".into(),
-        " ] ".into(),
-        "[ ".into(),
-        "p: Pending".into(),
-        " ] ".into(),
-        "[ ".into(),
-        "o: Ongoing".into(),
-        " ] ".into(),
-        "[ ".into(),
-        "P: Priority".into(),
-        " ] ".into(),
-        "[ ".into(),
-        "M: Menu".into(),
-        " ] ".into(),
-        "[ ".into(),
-        "q: Quit".into(),
-        " ]".into(),
+        Span::raw(" [↑/↓: Navigate] "),
+        Span::raw(" [Enter: Details] "),
+        Span::raw(" [M: Menu] "),
+        Span::raw(" [q: Quit] "),
     ])
 }
