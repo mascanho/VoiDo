@@ -26,7 +26,7 @@ impl InputField {
             active: true,
             title: title.to_string(),
             background: Color::Rgb(30, 15, 35),
-            border_color: Color::Rgb(200, 100, 220),
+            border_color: Color::Rgb(180, 140, 220),
             text_color: Color::White,
         }
     }
@@ -34,7 +34,7 @@ impl InputField {
     pub fn render(&mut self, f: &mut Frame, area: Rect) {
         // Add Borders::ALL to make the input field visible and interactive
         let input_block = Block::default()
-            .title(self.title.as_str())
+            .title(" Fuzzy Search ".to_string())
             .borders(Borders::ALL) // This was missing
             .style(Style::default().bg(self.background))
             .border_style(Style::default().fg(if self.active {
