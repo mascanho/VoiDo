@@ -58,7 +58,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         .constraints([
             Constraint::Length(3), // Search bar
             Constraint::Min(1),    // Table
-            Constraint::Length(3), // Stats
+            Constraint::Length(2), // Stats
             Constraint::Length(1), // Shortcuts
         ])
         .split(area);
@@ -70,7 +70,9 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 
     // Render search area (pass reference)
     f.render_widget(&search_block, layout[0]);
-    app.fuzzy_search.input.render(f, search_block.inner(layout[0]));
+    app.fuzzy_search
+        .input
+        .render(f, search_block.inner(layout[0]));
 
     // Prepare table rows
     let rows = if app.fuzzy_search.input.active {
@@ -106,33 +108,36 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             })
             .collect::<Vec<_>>()
     } else {
-        app.todos.iter().map(|todo| {
-            Row::new(vec![
-                todo.id.to_string().fg(text_primary),
-                match todo.priority.to_lowercase().as_str() {
-                    "high" => todo.priority.clone().fg(Color::Rgb(220, 80, 150)),
-                    "medium" => todo.priority.clone().fg(Color::Rgb(180, 120, 120)),
-                    "low" => todo.priority.clone().fg(Color::Rgb(120, 220, 150)),
-                    _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)),
-                },
-                todo.topic.clone().fg(text_primary),
-                todo.text.clone().fg(text_secondary),
-                todo.subtasks.len().to_string().fg(text_secondary),
-                todo.date_added.clone().fg(text_secondary),
-                todo.due.clone().fg(text_secondary),
-                match todo.status.as_str() {
-                    "Done" | "Completed" => todo.status.clone().fg(Color::Rgb(120, 220, 150)),
-                    "Ongoing" => todo.status.clone().fg(Color::Rgb(220, 180, 100)),
-                    "Planned" => todo.status.clone().fg(accent),
-                    "Pending" => todo.status.clone().fg(Color::Rgb(220, 100, 120)),
-                    _ => todo.status.clone().fg(text_primary),
-                },
-                todo.owner
-                    .clone()
-                    .fg(text_primary)
-                    .add_modifier(Modifier::ITALIC),
-            ])
-        }).collect::<Vec<_>>()
+        app.todos
+            .iter()
+            .map(|todo| {
+                Row::new(vec![
+                    todo.id.to_string().fg(text_primary),
+                    match todo.priority.to_lowercase().as_str() {
+                        "high" => todo.priority.clone().fg(Color::Rgb(220, 80, 150)),
+                        "medium" => todo.priority.clone().fg(Color::Rgb(180, 120, 120)),
+                        "low" => todo.priority.clone().fg(Color::Rgb(120, 220, 150)),
+                        _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)),
+                    },
+                    todo.topic.clone().fg(text_primary),
+                    todo.text.clone().fg(text_secondary),
+                    todo.subtasks.len().to_string().fg(text_secondary),
+                    todo.date_added.clone().fg(text_secondary),
+                    todo.due.clone().fg(text_secondary),
+                    match todo.status.as_str() {
+                        "Done" | "Completed" => todo.status.clone().fg(Color::Rgb(120, 220, 150)),
+                        "Ongoing" => todo.status.clone().fg(Color::Rgb(220, 180, 100)),
+                        "Planned" => todo.status.clone().fg(accent),
+                        "Pending" => todo.status.clone().fg(Color::Rgb(220, 100, 120)),
+                        _ => todo.status.clone().fg(text_primary),
+                    },
+                    todo.owner
+                        .clone()
+                        .fg(text_primary)
+                        .add_modifier(Modifier::ITALIC),
+                ])
+            })
+            .collect::<Vec<_>>()
     };
 
     // Create and render table
@@ -158,7 +163,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
     )
     .block(
         Block::default()
-            .title(" VoiDo ")
+            .title(" VoiDo - Tasks ")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(border))
             .style(Style::default().bg(background)),
@@ -175,7 +180,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 
     // Stats area
     let stats = calculate_stats(&app.todos);
-    let stats_widget = Paragraph::new(stats).block(
+    let stats_widget = Paragraph::new(stats).alignment(Alignment::Center).block(
         Block::default()
             .border_style(Style::default().fg(border))
             .style(Style::default().bg(background)),
@@ -185,6 +190,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
     // Shortcuts area
     let shortcuts = get_shortcuts_text();
     let shortcuts_widget = Paragraph::new(shortcuts)
+        .alignment(Alignment::Center)
         .style(Style::default().fg(text_secondary))
         .block(Block::default().style(Style::default().bg(background)));
     f.render_widget(shortcuts_widget, layout[3]);

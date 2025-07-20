@@ -335,7 +335,7 @@ async fn main() -> Result<(), io::Error> {
                         app.fuzzy_search.input.unfocus();
                         continue;
                     }
-                } 
+                }
 
                 match key.code {
                     KeyCode::Char('i') if !app.fuzzy_search.input.active => {
@@ -526,6 +526,8 @@ async fn main() -> Result<(), io::Error> {
                     KeyCode::Down | KeyCode::Char('j') => app.next(),
                     KeyCode::Up | KeyCode::Char('k') => app.previous(),
                     KeyCode::Enter | KeyCode::Char('l') => {
+                        app.fuzzy_search.input.unfocus();
+
                         if app.show_modal || app.show_main_menu_modal {
                             app.close_modal();
                         } else {

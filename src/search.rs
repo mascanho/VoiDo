@@ -1,3 +1,4 @@
+use crate::arguments::models::Todo;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use ratatui::{
@@ -8,7 +9,6 @@ use ratatui::{
     text::*,
     widgets::*,
 };
-use crate::arguments::models::Todo;
 
 use std::fmt;
 
@@ -59,12 +59,7 @@ impl FuzzySearch {
             for (idx, todo) in todos.iter().enumerate() {
                 let combined_text = format!(
                     "{} {} {} {} {} {}",
-                    todo.id,
-                    todo.priority,
-                    todo.topic,
-                    todo.text,
-                    todo.status,
-                    todo.owner
+                    todo.id, todo.priority, todo.topic, todo.text, todo.status, todo.owner
                 );
                 if self
                     .matcher
@@ -166,7 +161,7 @@ impl InputField {
     pub fn render(&mut self, f: &mut Frame, area: Rect) {
         // Add Borders::ALL to make the input field visible and interactive
         let input_block = Block::default()
-            .title(" Fuzzy Search ".to_string())
+            .title(" Search ".to_string())
             .borders(Borders::ALL) // This was missing
             .style(Style::default().bg(self.background))
             .border_style(Style::default().fg(if self.active {
@@ -246,6 +241,7 @@ impl InputField {
                 }
                 KeyCode::Esc => {
                     // Handle escape key if needed
+
                     return true;
                 }
                 _ => {}
@@ -263,3 +259,4 @@ impl InputField {
         self.cursor_position = 0;
     }
 }
+
