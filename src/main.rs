@@ -327,7 +327,19 @@ async fn main() -> Result<(), io::Error> {
             terminal.draw(|f| draw_ui(f, &mut app))?;
             if let Event::Key(key) = event::read()? {
                 if app.fuzzy_search.input.active {
-                    if app.handle_fuzzy_search(&Event::Key(key)) {
+                    if key.code == KeyCode::Enter {
+                        app.fuzzy_search.input.unfocus();
+                        app.input_mode = InputMode::Normal;
+                        app.select_current(); // Select and show details immediately
+                        continue; // Consume the event here
+                    } else if key.code == KeyCode::Esc {
+                        app.fuzzy_search.input.unfocus();
+                        app.fuzzy_search.input.value.clear();
+                        app.fuzzy_search.update_matches(&app.todos);
+                        app.update_filtered_todos();
+                        app.input_mode = InputMode::Normal;
+                        continue;
+                    } else if app.handle_fuzzy_search(&Event::Key(key)) {
                         continue;
                     }
                 }
@@ -335,6 +347,7 @@ async fn main() -> Result<(), io::Error> {
                 match key.code {
                     KeyCode::Char('i') if !app.fuzzy_search.input.active => {
                         app.fuzzy_search.input.focus();
+                        app.input_mode = InputMode::Search;
                         continue;
                     }
                     // Handle subtask navigation
@@ -521,9 +534,7 @@ async fn main() -> Result<(), io::Error> {
                     KeyCode::Down | KeyCode::Char('j') => app.next(),
                     KeyCode::Up | KeyCode::Char('k') => app.previous(),
                     KeyCode::Enter | KeyCode::Char('l') => {
-                        app.fuzzy_search.input.unfocus();
-
-                        if app.show_modal || app.show_main_menu_modal {
+                        if app.show_modal || app.show_main_menu_modal || app.show_priority_modal || app.show_delete_confirmation {
                             app.close_modal();
                         } else {
                             app.select_current();

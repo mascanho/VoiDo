@@ -146,7 +146,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         [
             Constraint::Length(5),  // ID
             Constraint::Min(12),    // PRIORITY
-            Constraint::Min(15),    // TOPIC
+            Constraint::Min(20),    // TOPIC
             Constraint::Fill(35),   // TODO
             Constraint::Length(8),  // SUBs
             Constraint::Length(12), // CREATED
