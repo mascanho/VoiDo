@@ -478,8 +478,10 @@ async fn main() -> Result<(), io::Error> {
                     }
 
                     // Show main menu modal
-                    KeyCode::Char('M') => {
-                        app.show_main_menu_modal = true;
+                    KeyCode::Char('\\') => {
+                        if app.show_main_menu_modal {
+                            app.show_main_menu_modal = false;
+                        }
                     }
 
                     // SHOW PRIORITY MODAL
@@ -498,6 +500,13 @@ async fn main() -> Result<(), io::Error> {
                             eprintln!("Error updating priority: {}", e);
                         }
                     }
+
+                    KeyCode::Char('M') => {
+                        if let Err(e) = app.handle_priority_change("Medium") {
+                            eprintln!("Error updating priority: {}", e);
+                        }
+                    }
+
                     KeyCode::Char('H') => {
                         if let Err(e) = app.handle_priority_change("High") {
                             eprintln!("Error updating priority: {}", e);
@@ -534,7 +543,11 @@ async fn main() -> Result<(), io::Error> {
                     KeyCode::Down | KeyCode::Char('j') => app.next(),
                     KeyCode::Up | KeyCode::Char('k') => app.previous(),
                     KeyCode::Enter | KeyCode::Char('l') => {
-                        if app.show_modal || app.show_main_menu_modal || app.show_priority_modal || app.show_delete_confirmation {
+                        if app.show_modal
+                            || app.show_main_menu_modal
+                            || app.show_priority_modal
+                            || app.show_delete_confirmation
+                        {
                             app.close_modal();
                         } else {
                             app.select_current();

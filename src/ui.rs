@@ -229,7 +229,7 @@ fn get_shortcuts_text() -> Line<'static> {
     Line::from(vec![
         Span::raw(" [↑/↓: Navigate] "),
         Span::raw(" [Enter: Details] "),
-        Span::raw(" [M: Menu] "),
+        Span::raw(" [\\: Menu] "),
         Span::raw(" [q: Quit] "),
     ])
 }
