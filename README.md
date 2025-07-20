@@ -8,6 +8,7 @@
 ## ✨ Features
 
 - **Interactive TUI**: A full-featured terminal UI to manage your todos with keyboard navigation.
+- **Fuzzy Search**: Quickly filter and find todos by typing in the search bar, which searches across all todo fields.
 - **AI-Powered Suggestions**: Leverage the power of Google's Gemini to get task suggestions based on your prompts.
 - **Comprehensive Task Management**: Add, delete, and update tasks with details like topics, priorities, owners, and due dates.
 - **Flexible Commands**: Use a wide range of flags to manage your todos without ever leaving the command line.
@@ -59,6 +60,9 @@ voido --list
 **Controls:**
 
 - **Navigate**: `Up`/`Down` arrow keys or `k`/`j`.
+- **Fuzzy Search**: 
+  - `i`: Focus the search input field. Type to filter todos dynamically. The filter persists as long as text is in the input.
+  - `Esc`: Unfocus the search input field. The current filter will remain active if there is text in the search bar.
 - **View Details**: `Enter` to open the details modal for the selected todo.
 - **Change Status**:
   - `p`: Mark as "Pending".
