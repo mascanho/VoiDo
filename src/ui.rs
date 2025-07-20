@@ -58,7 +58,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         .constraints([
             Constraint::Length(3), // Search bar
             Constraint::Min(1),    // Table
-            Constraint::Length(3), // Stats
+            Constraint::Length(2), // Stats
             Constraint::Length(1), // Shortcuts
         ])
         .split(area);

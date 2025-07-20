@@ -3,22 +3,29 @@ use arguments::{
     models::{self, Cli, Todo},
 };
 use clap::Parser;
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
+
 use data::sample_todos;
-use ratatui::widgets::{ListState, TableState};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
+    crossterm::{
+        event::{self, DisableMouseCapture, EnableMouseCapture},
+        execute,
+        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode},
+    },
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
 };
-use search::InputField;
+use ratatui::{
+    crossterm::terminal::enable_raw_mode,
+    widgets::{ListState, TableState},
+};
+
+use ratatui::crossterm::event::{Event, KeyCode};
+
+use search::{FuzzySearch, InputField};
 use std::io;
 use ui::{calculate_stats, draw_ui};
 
@@ -54,11 +61,22 @@ pub struct App {
     pub show_search_input: bool,
     pub input_mode: InputMode,
     pub search_input: InputField,
+    pub fuzzy_search: FuzzySearch,
+    pub filtered_indices: Vec<usize>,
+    pub focus: Focus,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Focus {
+    Table,
+    Search,
+    Modal,
 }
 
 impl App {
     fn new(todos: Vec<Todo>) -> Self {
         let mut state = TableState::default();
+        let filtered_indices = (0..todos.len()).collect();
         state.select(Some(0)); // Select first item by default
         Self {
             todos,
@@ -73,6 +91,9 @@ impl App {
             show_search_input: true,
             search_input: InputField::new("Search"),
             input_mode: InputMode::Normal,
+            fuzzy_search: FuzzySearch::new(),
+            filtered_indices,
+            focus: Focus::Table,
         }
     }
 
@@ -265,6 +286,41 @@ impl App {
         self.show_priority_modal = false;
         self.show_main_menu_modal = false;
     }
+
+    // HERE IS THE LOGIC FOR THE FUZZY SEARCH
+    fn handle_fuzzy_search(&mut self, event: &ratatui::crossterm::event::Event) -> bool {
+        let input_or_nav_handled = self.fuzzy_search.handle_event(event);
+
+        if input_or_nav_handled {
+            if let ratatui::crossterm::event::Event::Key(key) = event {
+                if matches!(
+                    key.code,
+                    ratatui::crossterm::event::KeyCode::Char(_)
+                        | ratatui::crossterm::event::KeyCode::Backspace
+                        | ratatui::crossterm::event::KeyCode::Delete
+                ) {
+                    self.fuzzy_search.update_matches(&self.todos);
+                }
+            }
+            self.update_filtered_todos();
+        }
+
+        input_or_nav_handled
+    }
+    //
+    fn update_filtered_todos(&mut self) {
+        // Update the filtered indices
+        self.filtered_indices = self.fuzzy_search.matched_indices().to_vec();
+
+        // Update table selection to match the fuzzy search selection
+        if !self.filtered_indices.is_empty() {
+            let selected_idx = self
+                .fuzzy_search
+                .selected_match()
+                .min(self.filtered_indices.len().saturating_sub(1));
+            self.state.select(Some(selected_idx));
+        }
+    }
 }
 
 #[tokio::main]
@@ -289,10 +345,33 @@ async fn main() -> Result<(), io::Error> {
 
         loop {
             terminal.draw(|f| draw_ui(f, &mut app))?;
+
             if let Event::Key(key) = event::read()? {
+                // 1. First handle search input if active (NEW)
+                if app.fuzzy_search.input.active {
+                    // Handle input events
+                    if app.fuzzy_search.input.handle_event(&Event::Key(key)) {
+                        app.fuzzy_search.update_matches(&app.todos);
+                        app.update_filtered_todos();
+                        continue;
+                    }
+
+                    // Exit search on Escape
+                    if key.code == KeyCode::Esc {
+                        app.fuzzy_search.input.unfocus();
+                        continue;
+                    }
+                }
+
+                // 2. Then handle all other key events
                 match key.code {
-                    // Handle subtask navigation
-                    // Only handle subtask navigation when modal is visible
+                    // NEW: Focus search input with 'i'
+                    KeyCode::Char('i') if !app.fuzzy_search.input.active => {
+                        app.fuzzy_search.input.focus();
+                        continue;
+                    }
+
+                    // Existing subtask navigation
                     KeyCode::Char('j') | KeyCode::Down if app.show_modal => {
                         if let Some(selected_todo) = &app.selected_todo {
                             if let Some(selected) = app.subtask_state.selected() {
@@ -304,6 +383,7 @@ async fn main() -> Result<(), io::Error> {
                             }
                         }
                     }
+
                     KeyCode::Char('k') | KeyCode::Up if app.show_modal => {
                         if let Some(selected) = app.subtask_state.selected() {
                             if selected > 0 {
@@ -311,6 +391,7 @@ async fn main() -> Result<(), io::Error> {
                             }
                         }
                     }
+
                     KeyCode::Char(' ') if app.show_modal => {
                         if let Some(selected) = app.subtask_state.selected() {
                             if let Some(todo) = &mut app.selected_todo {
@@ -326,9 +407,8 @@ async fn main() -> Result<(), io::Error> {
                         }
                     }
 
-                    // CHANGE SUBTASK STATUS
+                    // Existing subtask status change
                     KeyCode::Char('d') if app.show_modal => {
-                        // Early return if no selection or no todo
                         let Some(selected) = app.subtask_state.selected() else {
                             continue;
                         };
@@ -339,18 +419,14 @@ async fn main() -> Result<(), io::Error> {
                             continue;
                         };
 
-                        // Prepare update parameters
                         let todo_id = todo.id;
                         let subtask_id = subtask.subtask_id;
-
-                        // Determine new status
                         let new_status = if subtask.status == "Done" {
                             "Pending".to_string()
                         } else {
                             "Done".to_string()
                         };
 
-                        // Update database
                         if let Err(e) = app.change_subtask_status(
                             todo_id as i32,
                             subtask_id as i32,
@@ -360,14 +436,12 @@ async fn main() -> Result<(), io::Error> {
                             continue;
                         }
 
-                        // Update both in-memory states
                         if let Some(todo) = &mut app.selected_todo {
                             if let Some(subtask) = todo.subtasks.get_mut(selected) {
                                 subtask.status = new_status.clone();
                             }
                         }
 
-                        // Update the main todos list
                         if let Some(todo) = app.todos.iter_mut().find(|t| t.id == todo_id) {
                             if let Some(subtask) = todo
                                 .subtasks
@@ -378,10 +452,10 @@ async fn main() -> Result<(), io::Error> {
                             }
                         }
 
-                        // Force a full refresh from DB to ensure consistency
                         app.load_todo(todo_id);
                     }
-                    //////
+
+                    // Existing todo status changes
                     KeyCode::Char('d') => {
                         if let Some(selected) = app.state.selected() {
                             if selected < app.todos.len() {
@@ -418,12 +492,11 @@ async fn main() -> Result<(), io::Error> {
                         }
                     }
 
-                    // Show main menu modal
+                    // Existing modals
                     KeyCode::Char('M') => {
                         app.show_main_menu_modal = true;
                     }
 
-                    // SHOW PRIORITY MODAL
                     KeyCode::Char('P') => {
                         if let Some(selected) = app.state.selected() {
                             app.close_modal();
@@ -433,39 +506,39 @@ async fn main() -> Result<(), io::Error> {
                         }
                     }
 
-                    // Handle priority changes
+                    // Existing priority changes
                     KeyCode::Char('L') => {
                         if let Err(e) = app.handle_priority_change("Low") {
                             eprintln!("Error updating priority: {}", e);
                         }
                     }
+
                     KeyCode::Char('M') => {
                         if let Err(e) = app.handle_priority_change("Medium") {
                             eprintln!("Error updating priority: {}", e);
                         }
                     }
+
                     KeyCode::Char('H') => {
                         if let Err(e) = app.handle_priority_change("High") {
                             eprintln!("Error updating priority: {}", e);
                         }
                     }
 
-                    // Delete todo
+                    // Existing delete handling
                     KeyCode::Delete | KeyCode::Char('x') => {
                         if !app.todos.is_empty() && !app.show_modal {
                             app.show_delete_confirmation = true;
                         }
 
-                        // IF THE TODO MODAL IS SHOWING THE SUBTASKS
                         if app.show_modal {
-                            // Execute the delete action on the subtasks only
                             if let Err(e) = app.delete_current_subtask() {
                                 eprintln!("Error deleting subtask: {}", e);
                             }
                         }
                     }
 
-                    // Handle delete confirmation
+                    // Existing confirmation handling
                     KeyCode::Char('y') if app.show_delete_confirmation => {
                         if let Err(e) = app.delete_current_todo() {
                             eprintln!("Error deleting todo: {}", e);
@@ -476,6 +549,8 @@ async fn main() -> Result<(), io::Error> {
                     KeyCode::Char('n') if app.show_delete_confirmation => {
                         app.show_delete_confirmation = false;
                     }
+
+                    // Existing navigation
                     KeyCode::Char('q') => break,
                     KeyCode::Down | KeyCode::Char('j') => app.next(),
                     KeyCode::Up | KeyCode::Char('k') => app.previous(),
