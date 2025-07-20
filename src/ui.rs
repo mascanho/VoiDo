@@ -163,7 +163,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
     )
     .block(
         Block::default()
-            .title(" VoiDo - Tasks ")
+            .title("")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(border))
             .style(Style::default().bg(background)),

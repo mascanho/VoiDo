@@ -479,9 +479,7 @@ async fn main() -> Result<(), io::Error> {
 
                     // Show main menu modal
                     KeyCode::Char('\\') => {
-                        if app.show_main_menu_modal {
-                            app.show_main_menu_modal = false;
-                        }
+                        app.show_main_menu_modal = !app.show_main_menu_modal;
                     }
 
                     // SHOW PRIORITY MODAL
