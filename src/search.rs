@@ -55,9 +55,22 @@ impl FuzzySearch {
             // Show all items when search is empty
             self.matched_indices.extend(0..todos.len());
         } else {
-            // Fuzzy match against todo text
+            // Fuzzy match against all todo fields
             for (idx, todo) in todos.iter().enumerate() {
-                if self.matcher.fuzzy_match(&todo.text, search_text).is_some() {
+                let combined_text = format!(
+                    "{} {} {} {} {} {}",
+                    todo.id,
+                    todo.priority,
+                    todo.topic,
+                    todo.text,
+                    todo.status,
+                    todo.owner
+                );
+                if self
+                    .matcher
+                    .fuzzy_match(&combined_text, search_text)
+                    .is_some()
+                {
                     self.matched_indices.push(idx);
                 }
             }
