@@ -85,12 +85,9 @@ impl FuzzySearch {
             return false;
         }
 
-        // Handle input changes
-        let input_changed = if let Event::Key(key) = event {
-            matches!(
-                key.code,
-                KeyCode::Char(_) | KeyCode::Backspace | KeyCode::Delete
-            ) && self.input.handle_event(event)
+        // Handle input changes (typing, backspace, delete, ESC)
+        let input_handled = if let Event::Key(_) = event {
+            self.input.handle_event(event) // Pass all key events to InputField
         } else {
             false
         };
@@ -121,7 +118,7 @@ impl FuzzySearch {
             false
         };
 
-        input_changed || navigation_handled
+        input_handled || navigation_handled
     }
 }
 
@@ -240,8 +237,7 @@ impl InputField {
                     return true;
                 }
                 KeyCode::Esc => {
-                    // Handle escape key if needed
-
+                    self.unfocus();
                     return true;
                 }
                 _ => {}

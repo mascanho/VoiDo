@@ -267,24 +267,23 @@ impl App {
         self.selected_todo = None;
         self.show_priority_modal = false;
         self.show_main_menu_modal = false;
+
+        // Re-apply filter if there's text in the search input
+        if !self.fuzzy_search.input.value.is_empty() {
+            self.fuzzy_search.update_matches(&self.todos);
+            self.update_filtered_todos();
+        }
     }
 
     fn handle_fuzzy_search(&mut self, event: &Event) -> bool {
-        let input_or_nav_handled = self.fuzzy_search.handle_event(event);
+        let event_handled = self.fuzzy_search.handle_event(event);
 
-        if input_or_nav_handled {
-            if let Event::Key(key) = event {
-                if matches!(
-                    key.code,
-                    KeyCode::Char(_) | KeyCode::Backspace | KeyCode::Delete
-                ) {
-                    self.fuzzy_search.update_matches(&self.todos);
-                }
-            }
+        if event_handled {
+            // Always update matches and filtered todos if any event was handled by fuzzy search
+            self.fuzzy_search.update_matches(&self.todos);
             self.update_filtered_todos();
         }
-
-        input_or_nav_handled
+        event_handled
     }
 
     fn update_filtered_todos(&mut self) {
@@ -329,10 +328,6 @@ async fn main() -> Result<(), io::Error> {
             if let Event::Key(key) = event::read()? {
                 if app.fuzzy_search.input.active {
                     if app.handle_fuzzy_search(&Event::Key(key)) {
-                        continue;
-                    }
-                    if key.code == KeyCode::Esc {
-                        app.fuzzy_search.input.unfocus();
                         continue;
                     }
                 }
