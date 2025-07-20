@@ -254,10 +254,13 @@ impl App {
     }
 
     fn select_current(&mut self) {
-        if let Some(index) = self.state.selected() {
-            if index < self.todos.len() {
-                self.selected_todo = Some(self.todos[index].clone());
-                self.show_modal = true;
+        if let Some(filtered_index) = self.state.selected() {
+            if filtered_index < self.filtered_indices.len() {
+                let original_index = self.filtered_indices[filtered_index];
+                if original_index < self.todos.len() {
+                    self.selected_todo = Some(self.todos[original_index].clone());
+                    self.show_modal = true;
+                }
             }
         }
     }
