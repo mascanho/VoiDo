@@ -1,3 +1,5 @@
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
     layout::*,
@@ -6,6 +8,114 @@ use ratatui::{
     text::*,
     widgets::*,
 };
+use crate::arguments::models::Todo;
+
+use std::fmt;
+
+impl fmt::Debug for FuzzySearch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FuzzySearch")
+            .field("input", &self.input)
+            .field("matched_indices", &self.matched_indices)
+            .field("selected_match", &self.selected_match)
+            .finish()
+    }
+}
+
+pub struct FuzzySearch {
+    matcher: SkimMatcherV2,
+    pub input: InputField,
+    matched_indices: Vec<usize>,
+    selected_match: usize,
+}
+
+impl FuzzySearch {
+    pub fn new() -> Self {
+        Self {
+            matcher: SkimMatcherV2::default(),
+            input: InputField::new("Search"),
+            matched_indices: Vec::new(),
+            selected_match: 0,
+        }
+    }
+
+    pub fn matched_indices(&self) -> &[usize] {
+        &self.matched_indices
+    }
+
+    pub fn selected_match(&self) -> usize {
+        self.selected_match
+    }
+
+    pub fn update_matches(&mut self, todos: &[Todo]) {
+        self.matched_indices.clear();
+
+        let search_text = &self.input.value;
+        if search_text.is_empty() {
+            // Show all items when search is empty
+            self.matched_indices.extend(0..todos.len());
+        } else {
+            // Fuzzy match against todo text
+            for (idx, todo) in todos.iter().enumerate() {
+                if self.matcher.fuzzy_match(&todo.text, search_text).is_some() {
+                    self.matched_indices.push(idx);
+                }
+            }
+        }
+
+        // Reset selection
+        self.selected_match = if self.matched_indices.is_empty() {
+            0
+        } else {
+            self.selected_match
+                .min(self.matched_indices.len().saturating_sub(1))
+        };
+    }
+
+    pub fn handle_event(&mut self, event: &Event) -> bool {
+        if !self.input.active {
+            return false;
+        }
+
+        // Handle input changes
+        let input_changed = if let Event::Key(key) = event {
+            matches!(
+                key.code,
+                KeyCode::Char(_) | KeyCode::Backspace | KeyCode::Delete
+            ) && self.input.handle_event(event)
+        } else {
+            false
+        };
+
+        // Handle navigation
+        let navigation_handled = if let Event::Key(key) = event {
+            match key.code {
+                KeyCode::Down => {
+                    if !self.matched_indices.is_empty() {
+                        self.selected_match =
+                            (self.selected_match + 1).min(self.matched_indices.len() - 1);
+                        true
+                    } else {
+                        false
+                    }
+                }
+                KeyCode::Up => {
+                    if !self.matched_indices.is_empty() {
+                        self.selected_match = self.selected_match.saturating_sub(1);
+                        true
+                    } else {
+                        false
+                    }
+                }
+                _ => false,
+            }
+        } else {
+            false
+        };
+
+        input_changed || navigation_handled
+    }
+}
 
 #[derive(Debug)]
 pub struct InputField {
@@ -23,12 +133,21 @@ impl InputField {
         Self {
             value: String::new(),
             cursor_position: 0,
-            active: true,
+            active: false, // Start inactive
             title: title.to_string(),
             background: Color::Rgb(30, 15, 35),
             border_color: Color::Rgb(180, 140, 220),
             text_color: Color::White,
         }
+    }
+
+    pub fn focus(&mut self) {
+        self.active = true;
+        self.cursor_position = self.value.len(); // Move cursor to end
+    }
+
+    pub fn unfocus(&mut self) {
+        self.active = false;
     }
 
     pub fn render(&mut self, f: &mut Frame, area: Rect) {

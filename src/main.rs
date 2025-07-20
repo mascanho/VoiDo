@@ -18,7 +18,7 @@ use ratatui::{
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
 };
-use search::InputField;
+use search::{FuzzySearch, InputField};
 use std::io;
 use ui::{calculate_stats, draw_ui};
 
@@ -53,12 +53,14 @@ pub struct App {
     pub selected_subtask: Option<String>,
     pub show_search_input: bool,
     pub input_mode: InputMode,
-    pub search_input: InputField,
+    pub fuzzy_search: FuzzySearch,
+    pub filtered_indices: Vec<usize>,
 }
 
 impl App {
     fn new(todos: Vec<Todo>) -> Self {
         let mut state = TableState::default();
+        let filtered_indices = (0..todos.len()).collect();
         state.select(Some(0)); // Select first item by default
         Self {
             todos,
@@ -71,8 +73,9 @@ impl App {
             subtask_state: ListState::default(),
             selected_subtask: None,
             show_search_input: true,
-            search_input: InputField::new("Search"),
             input_mode: InputMode::Normal,
+            fuzzy_search: FuzzySearch::new(),
+            filtered_indices,
         }
     }
 
@@ -265,6 +268,40 @@ impl App {
         self.show_priority_modal = false;
         self.show_main_menu_modal = false;
     }
+
+    fn handle_fuzzy_search(&mut self, event: &Event) -> bool {
+        let input_or_nav_handled = self.fuzzy_search.handle_event(event);
+
+        if input_or_nav_handled {
+            if let Event::Key(key) = event {
+                if matches!(
+                    key.code,
+                    KeyCode::Char(_) | KeyCode::Backspace | KeyCode::Delete
+                ) {
+                    self.fuzzy_search.update_matches(&self.todos);
+                }
+            }
+            self.update_filtered_todos();
+        }
+
+        input_or_nav_handled
+    }
+
+    fn update_filtered_todos(&mut self) {
+        // Update the filtered indices
+        self.filtered_indices = self.fuzzy_search.matched_indices().to_vec();
+
+        // Update table selection to match the fuzzy search selection
+        if !self.filtered_indices.is_empty() {
+            let selected_idx = self
+                .fuzzy_search
+                .selected_match()
+                .min(self.filtered_indices.len().saturating_sub(1));
+            self.state.select(Some(selected_idx));
+        } else {
+            self.state.select(None);
+        }
+    }
 }
 
 #[tokio::main]
@@ -290,7 +327,21 @@ async fn main() -> Result<(), io::Error> {
         loop {
             terminal.draw(|f| draw_ui(f, &mut app))?;
             if let Event::Key(key) = event::read()? {
+                if app.fuzzy_search.input.active {
+                    if app.handle_fuzzy_search(&Event::Key(key)) {
+                        continue;
+                    }
+                    if key.code == KeyCode::Esc {
+                        app.fuzzy_search.input.unfocus();
+                        continue;
+                    }
+                } 
+
                 match key.code {
+                    KeyCode::Char('i') if !app.fuzzy_search.input.active => {
+                        app.fuzzy_search.input.focus();
+                        continue;
+                    }
                     // Handle subtask navigation
                     // Only handle subtask navigation when modal is visible
                     KeyCode::Char('j') | KeyCode::Down if app.show_modal => {
@@ -436,11 +487,6 @@ async fn main() -> Result<(), io::Error> {
                     // Handle priority changes
                     KeyCode::Char('L') => {
                         if let Err(e) = app.handle_priority_change("Low") {
-                            eprintln!("Error updating priority: {}", e);
-                        }
-                    }
-                    KeyCode::Char('M') => {
-                        if let Err(e) = app.handle_priority_change("Medium") {
                             eprintln!("Error updating priority: {}", e);
                         }
                     }
