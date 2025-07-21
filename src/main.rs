@@ -25,12 +25,12 @@ use ui::{calculate_stats, draw_ui};
 mod ai; // LLMS stuff
 mod args; // Print all the args available in the App so it does not clutter the main.rs
 mod arguments;
-mod colors;
 mod configs;
 mod data; // DATABASE STUFF;
 mod database;
 mod modals; // All the modals logic
 mod search;
+mod settings;
 mod ui; // ALL THE UI STUFF
 mod xls; // Fuzy serach and UI input logic
 
@@ -310,6 +310,9 @@ impl App {
 async fn main() -> Result<(), io::Error> {
     // Create the configs
     let _ = configs::AppConfigs::create_default_config();
+
+    // Initiate the base configs the user can tweak
+    let _user_settings = settings::settings::AppConfig::create_default_config();
 
     let cli = Cli::parse();
 

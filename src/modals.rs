@@ -377,4 +377,3 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
     // Render the table
     f.render_widget(table, inner_area);
 }
-
