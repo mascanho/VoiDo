@@ -1,5 +1,6 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+use xlsxwriter::StringOrFloat;
 
 use super::colors::Colors;
 
@@ -10,12 +11,13 @@ pub struct AppConfig {
     pub secondary_color: Colors,
     pub accent_color: Colors,
     pub columns: Vec<String>,
+    pub ai: String,
 }
 
 impl AppConfig {
     pub fn create_default_config() -> AppConfig {
         let project_dirs = ProjectDirs::from("", "", "voido").unwrap();
-        let config_path = project_dirs.config_dir().join("config.toml");
+        let config_path = project_dirs.config_dir().join("user_settings.toml");
 
         let config = AppConfig {
             api_key: String::new(),
@@ -33,8 +35,12 @@ impl AppConfig {
                 "STATUS".to_string(),
                 "OWNER".to_string(),
             ],
+            ai: String::from("openai"),
         };
 
+        if config_path.exists() {
+            return config;
+        }
         std::fs::write(config_path, toml::to_string(&config).unwrap()).unwrap();
 
         config

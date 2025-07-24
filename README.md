@@ -5,6 +5,8 @@
 
 **VoiDo** is a powerful and intuitive command-line (CLI) todo application built with Rust, supercharged with AI capabilities. It allows you to manage your tasks efficiently directly from your terminal, offering both an interactive terminal user interface (TUI) and a comprehensive set of commands for quick, command-line operations.
 
+Don't let your tasks fall into the void! VoiDo is here to help you stay organized and keep your life on track.
+
 ## ✨ Features
 
 - **Interactive TUI**: A full-featured terminal UI to manage your todos with keyboard navigation.
@@ -60,7 +62,7 @@ voido --list
 **Controls:**
 
 - **Navigate**: `Up`/`Down` arrow keys or `k`/`j`.
-- **Fuzzy Search**: 
+- **Fuzzy Search**:
   - `i`: Focus the search input field. Type to filter todos dynamically. The filter persists as long as text is in the input.
   - `Esc`: Unfocus the search input field. The current filter will remain active if there is text in the search bar.
 - **View Details**: `Enter` to open the details modal for the selected todo.
