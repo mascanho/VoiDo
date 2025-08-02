@@ -55,6 +55,9 @@ pub struct App {
     pub input_mode: InputMode,
     pub fuzzy_search: FuzzySearch,
     pub filtered_indices: Vec<usize>,
+    pub notes: bool,
+    pub notes_input: InputField,
+    pub editing_notes: bool,
 }
 
 impl App {
@@ -76,6 +79,9 @@ impl App {
             input_mode: InputMode::Normal,
             fuzzy_search: FuzzySearch::new(),
             filtered_indices,
+            notes: false,
+            notes_input: InputField::new("Notes"),
+            editing_notes: false,
         }
     }
 
@@ -142,6 +148,26 @@ impl App {
                 return Err("Selected index out of bounds!".into());
             }
         }
+        Ok(())
+    }
+
+    // UPDATE TODO NOTES
+    fn update_notes(&mut self, id: i32, notes: String) -> Result<(), Box<dyn std::error::Error>> {
+        let db = database::DBtodo::new()?;
+        db.update_notes(id, notes.clone())?;
+
+        // Update local state
+        if let Some(todo) = self.todos.iter_mut().find(|t| t.id == id as usize) {
+            todo.notes = notes.clone();
+        }
+
+        // Update selected todo if it matches
+        if let Some(selected_todo) = &mut self.selected_todo {
+            if selected_todo.id == id as usize {
+                selected_todo.notes = notes;
+            }
+        }
+
         Ok(())
     }
 
@@ -267,6 +293,9 @@ impl App {
         self.selected_todo = None;
         self.show_priority_modal = false;
         self.show_main_menu_modal = false;
+        self.editing_notes = false;
+        self.notes_input.unfocus();
+        self.notes_input.value.clear();
 
         // Re-apply filter if there's text in the search input
         if !self.fuzzy_search.input.value.is_empty() {
@@ -326,6 +355,25 @@ async fn main() -> Result<(), io::Error> {
         loop {
             terminal.draw(|f| draw_ui(f, &mut app))?;
             if let Event::Key(key) = event::read()? {
+                // Handle notes editing input
+                if app.editing_notes {
+                    match key.code {
+                        KeyCode::Esc => {
+                            // Save notes and exit editing mode
+                            if let Some(todo) = &app.selected_todo {
+                                let _ =
+                                    app.update_notes(todo.id as i32, app.notes_input.value.clone());
+                            }
+                            app.editing_notes = false;
+                            app.notes_input.unfocus();
+                        }
+                        _ => {
+                            app.notes_input.handle_event(&Event::Key(key));
+                        }
+                    }
+                    continue;
+                }
+
                 if app.fuzzy_search.input.active {
                     if key.code == KeyCode::Enter {
                         app.fuzzy_search.input.unfocus();
@@ -440,6 +488,16 @@ async fn main() -> Result<(), io::Error> {
                         // Force a full refresh from DB to ensure consistency
                         app.load_todo(todo_id);
                     }
+
+                    // Start editing notes
+                    KeyCode::Char('N') if app.show_modal => {
+                        if let Some(todo) = &app.selected_todo {
+                            app.editing_notes = true;
+                            app.notes_input.value = todo.notes.clone();
+                            app.notes_input.focus();
+                        }
+                    }
+
                     //////
                     KeyCode::Char('d') => {
                         if let Some(selected) = app.state.selected() {

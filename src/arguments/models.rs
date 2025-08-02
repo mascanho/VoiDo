@@ -12,6 +12,7 @@ pub struct Todo {
     pub owner: String,
     pub due: String,
     pub subtasks: Vec<Subtask>,
+    pub notes: String,
 }
 
 #[derive(Debug, Clone)]

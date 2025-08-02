@@ -48,6 +48,8 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             area,
             app.selected_todo.as_ref().unwrap(),
             &mut app.subtask_state,
+            app.editing_notes,
+            &app.notes_input,
         );
         return;
     }

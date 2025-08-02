@@ -25,7 +25,14 @@ pub fn dynamic_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect
     Rect::new(x, y, width, height)
 }
 
-pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo, state: &mut ListState) {
+pub fn draw_todo_modal(
+    f: &mut Frame,
+    area: Rect,
+    todo: &Todo,
+    state: &mut ListState,
+    editing_notes: bool,
+    notes_input: &crate::search::InputField,
+) {
     // Elegant purple color palette
     let background = Color::Rgb(25, 15, 30); // Deep purple
     let accent = Color::Rgb(150, 80, 220); // Vibrant purple
@@ -45,7 +52,7 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo, state: &mut ListS
 
     let inner_area = area.inner(Margin {
         vertical: 2,
-        horizontal: 3,
+        horizontal: 2,
     });
 
     // Create styled text with purple color scheme
@@ -104,13 +111,63 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo, state: &mut ListS
         .wrap(Wrap { trim: true })
         .block(Block::default().style(Style::default().bg(background)));
 
-    // Split the inner area to make space for the subtasks
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+    // Split the inner area horizontally first - left 2/3 for main content, right 1/3 for notes
+    let horizontal_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(67), Constraint::Percentage(33)].as_ref())
         .split(inner_area);
 
-    f.render_widget(paragraph, layout[0]);
+    // Split the left area vertically for main content and subtasks
+    let left_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+        .split(horizontal_layout[0]);
+
+    // Render main todo information in the top-left
+    f.render_widget(paragraph, left_layout[0]);
+
+    // Create notes section in the top-right
+    if editing_notes {
+        // Show input field for editing notes
+        let notes_input_text = vec![
+            Line::from(vec!["NOTES (ESC to save): ".fg(text_secondary)]),
+            Line::from(""),
+            Line::from(notes_input.value.as_str().fg(text_primary)),
+        ];
+
+        let notes_paragraph = Paragraph::new(notes_input_text)
+            .wrap(Wrap { trim: true })
+            .block(
+                Block::default()
+                    .title(" Editing Notes ")
+                    .borders(Borders::ALL)
+                    .border_style(
+                        Style::default()
+                            .fg(Color::Rgb(220, 180, 100))
+                            .add_modifier(Modifier::BOLD),
+                    )
+                    .style(Style::default().bg(background).fg(text_primary)),
+            );
+
+        f.render_widget(notes_paragraph, horizontal_layout[1]);
+    } else {
+        // Show read-only notes
+        let notes_text = vec![
+            Line::from(vec!["NOTES (N to edit): ".fg(text_secondary)]),
+            Line::from(""),
+            Line::from(todo.notes.as_str().fg(text_primary)),
+        ];
+
+        let notes_paragraph = Paragraph::new(notes_text).wrap(Wrap { trim: true }).block(
+            Block::default()
+                .title(" Notes ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD))
+                .style(Style::default().bg(background).fg(text_primary)),
+        );
+
+        f.render_widget(notes_paragraph, horizontal_layout[1]);
+    }
 
     // Create a list for subtasks
     let subtask_items: Vec<ListItem> = todo
@@ -158,7 +215,7 @@ pub fn draw_todo_modal(f: &mut Frame, area: Rect, todo: &Todo, state: &mut ListS
         .repeat_highlight_symbol(true);
 
     // This is the critical change - use render_stateful_widget instead of render_widget
-    f.render_stateful_widget(subtask_list, layout[1], state);
+    f.render_stateful_widget(subtask_list, left_layout[1], state);
 }
 
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -377,4 +434,3 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
     // Render the table
     f.render_widget(table, inner_area);
 }
-

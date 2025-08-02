@@ -103,6 +103,7 @@ pub fn add_todo(
         status: "Pending".to_string(),
         owner,
         subtasks,
+        notes: String::new(), // Initialize notes as empty string
     };
 
     db.add_todo(&new_todo)?;
