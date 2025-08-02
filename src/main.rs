@@ -29,10 +29,11 @@ mod colors;
 mod configs;
 mod data; // DATABASE STUFF;
 mod database;
+mod markdown;
 mod modals; // All the modals logic
 mod search;
 mod ui; // ALL THE UI STUFF
-mod xls; // Fuzy serach and UI input logic
+mod xls; // Fuzy serach and UI input logic // Markdown parsing for notes
 
 #[derive(Debug)]
 pub enum InputMode {
@@ -59,6 +60,7 @@ pub struct App {
     pub notes_input: InputField,
     pub editing_notes: bool,
     pub notes_scroll_offset: u16,
+    pub notes_preview_mode: bool,
 }
 
 impl App {
@@ -84,6 +86,7 @@ impl App {
             notes_input: InputField::new_multiline("Notes"),
             editing_notes: false,
             notes_scroll_offset: 0,
+            notes_preview_mode: false,
         }
     }
 
@@ -337,6 +340,7 @@ impl App {
         self.notes_input.unfocus();
         self.notes_input.value.clear();
         self.notes_scroll_offset = 0;
+        self.notes_preview_mode = false;
 
         // Re-apply filter if there's text in the search input
         if !self.fuzzy_search.input.value.is_empty() {
@@ -415,6 +419,10 @@ async fn main() -> Result<(), io::Error> {
                             let visible_height = app.calculate_notes_visible_height();
                             let max_lines = app.notes_input.value.lines().count() as u16;
                             app.scroll_notes_down(max_lines, visible_height);
+                        }
+                        KeyCode::Tab => {
+                            // Toggle between edit and preview mode
+                            app.notes_preview_mode = !app.notes_preview_mode;
                         }
                         _ => {
                             app.notes_input.handle_event(&Event::Key(key));

@@ -11,6 +11,7 @@ use ratatui::{
 };
 
 use crate::arguments::models::Todo;
+use crate::markdown::MarkdownRenderer;
 
 // Dynamic sizing helper function
 pub fn dynamic_rect(width_percent: u16, height_percent: u16, area: Rect) -> Rect {
@@ -31,6 +32,7 @@ pub fn draw_todo_modal(
     editing_notes: bool,
     notes_input: &crate::search::InputField,
     notes_scroll_offset: u16,
+    notes_preview_mode: bool,
 ) {
     // Elegant purple color palette
     let background = Color::Rgb(25, 15, 30); // Deep purple
@@ -149,10 +151,18 @@ pub fn draw_todo_modal(
         vertical: 0,
     });
 
+    // Create markdown renderer
+    let markdown_renderer = MarkdownRenderer::new();
+
     if editing_notes {
         // Create a block for the notes editing area
+        let title = if notes_preview_mode {
+            " Editing Notes (Preview) - Tab to toggle "
+        } else {
+            " Editing Notes (Raw) - Tab to toggle "
+        };
         let notes_block = Block::default()
-            .title(" Editing Notes ")
+            .title(title)
             .borders(Borders::ALL)
             .border_style(
                 Style::default()
@@ -171,8 +181,12 @@ pub fn draw_todo_modal(
         });
 
         // Create the header line
-        let header =
-            Paragraph::new("NOTES (ESC to save):").style(Style::default().fg(text_secondary));
+        let header_text = if notes_preview_mode {
+            "NOTES (ESC to save, Tab to edit):"
+        } else {
+            "NOTES (ESC to save, Tab to preview):"
+        };
+        let header = Paragraph::new(header_text).style(Style::default().fg(text_secondary));
 
         // Split the inner area for header and content
         let notes_layout = Layout::default()
@@ -182,21 +196,25 @@ pub fn draw_todo_modal(
 
         f.render_widget(header, notes_layout[0]);
 
-        // Render the input content with cursor
+        // Render the input content with cursor and markdown syntax highlighting
         let content_area = notes_layout[1];
         let visible_height = content_area.height;
 
-        // Split notes by single newlines to preserve all line breaks
-        let lines: Vec<&str> = notes_input.value.split('\n').collect();
-        let mut display_lines = Vec::new();
+        // Choose rendering mode based on preview toggle
+        let display_lines = if notes_preview_mode {
+            // Preview mode - render full markdown
+            markdown_renderer.render(&notes_input.value)
+        } else {
+            // Edit mode - syntax highlighting with cursor
+            markdown_renderer.render_for_editing(
+                &notes_input.value,
+                notes_input.cursor_line,
+                notes_input.cursor_col,
+            )
+        };
 
         // Calculate scroll bounds
-        let total_lines = lines.len()
-            + if notes_input.active && notes_input.cursor_line >= lines.len() {
-                1
-            } else {
-                0
-            };
+        let total_lines = display_lines.len();
         let max_scroll = if total_lines > visible_height as usize {
             total_lines - visible_height as usize
         } else {
@@ -204,38 +222,16 @@ pub fn draw_todo_modal(
         };
         let scroll_offset = (notes_scroll_offset as usize).min(max_scroll);
 
-        // Only render visible lines based on scroll offset
+        // Get visible lines based on scroll offset
         let start_line = scroll_offset;
-        let end_line = (start_line + visible_height as usize).min(lines.len());
+        let end_line = (start_line + visible_height as usize).min(total_lines);
+        let visible_lines = if start_line < display_lines.len() {
+            display_lines[start_line..end_line].to_vec()
+        } else {
+            Vec::new()
+        };
 
-        for line_idx in start_line..end_line {
-            let line = lines[line_idx];
-            if line_idx == notes_input.cursor_line && notes_input.active {
-                // This is the line with the cursor - insert cursor character
-                let mut line_with_cursor = line.to_string();
-                let cursor_pos = notes_input.cursor_col.min(line.len());
-                line_with_cursor.insert(cursor_pos, '█'); // Block cursor character
-                display_lines.push(Line::from(line_with_cursor.fg(text_primary)));
-            } else {
-                display_lines.push(Line::from(line.fg(text_primary)));
-            }
-        }
-
-        // If we're at the end and on a new line, show cursor on empty line
-        if notes_input.active && notes_input.cursor_line >= lines.len() {
-            let cursor_line_in_view = notes_input.cursor_line - start_line;
-            if cursor_line_in_view < visible_height as usize {
-                // Pad with empty lines if needed
-                while display_lines.len() <= cursor_line_in_view {
-                    display_lines.push(Line::from(""));
-                }
-                if display_lines.len() == cursor_line_in_view {
-                    display_lines.push(Line::from("█".fg(text_primary)));
-                }
-            }
-        }
-
-        let content_paragraph = Paragraph::new(display_lines)
+        let content_paragraph = Paragraph::new(visible_lines)
             .wrap(Wrap { trim: false })
             .style(Style::default().bg(background));
 
@@ -255,16 +251,53 @@ pub fn draw_todo_modal(
             f.render_widget(indicator_widget, indicator_area);
         }
     } else {
-        // Show read-only notes - split by paragraphs
+        // Show read-only notes with full markdown rendering
         let mut notes_lines = vec![
             Line::from(vec!["NOTES (N to edit): ".fg(text_secondary)]),
             Line::from(""),
         ];
 
-        // Split notes by single newlines to preserve all line breaks
-        let lines: Vec<&str> = todo.notes.split('\n').collect();
-        for line in lines.iter() {
-            notes_lines.push(Line::from(line.fg(text_primary)));
+        // Add markdown help if notes are empty
+        if todo.notes.trim().is_empty() {
+            notes_lines.extend(vec![
+                Line::from(vec!["Markdown Help:".fg(Color::Rgb(220, 180, 100))]),
+                Line::from(""),
+                Line::from(vec![
+                    "# ".fg(Color::Rgb(220, 180, 100)),
+                    "Heading".fg(text_primary),
+                ]),
+                Line::from(vec![
+                    "**".fg(Color::Rgb(150, 80, 220)),
+                    "bold".fg(Color::Rgb(255, 255, 255)),
+                    "**".fg(Color::Rgb(150, 80, 220)),
+                    " and ".fg(text_primary),
+                    "*".fg(Color::Rgb(150, 80, 220)),
+                    "italic".fg(Color::Rgb(180, 140, 220)),
+                    "*".fg(Color::Rgb(150, 80, 220)),
+                ]),
+                Line::from(vec![
+                    "`".fg(Color::Rgb(120, 220, 150)),
+                    "code".fg(Color::Rgb(120, 220, 150)),
+                    "`".fg(Color::Rgb(120, 220, 150)),
+                    " and ".fg(text_primary),
+                    "- ".fg(Color::Rgb(150, 80, 220)),
+                    "lists".fg(text_primary),
+                ]),
+                Line::from(vec![
+                    "> ".fg(Color::Rgb(200, 180, 220)),
+                    "blockquotes".fg(Color::Rgb(200, 180, 220)),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    "Press ".fg(text_secondary),
+                    "N".fg(Color::Rgb(220, 180, 100)),
+                    " to start editing with markdown support".fg(text_secondary),
+                ]),
+            ]);
+        } else {
+            // Render markdown content
+            let rendered_markdown = markdown_renderer.render(&todo.notes);
+            notes_lines.extend(rendered_markdown);
         }
 
         // Calculate visible area for read-only mode
@@ -550,6 +583,9 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
         ("p", "Mark the selected TODO as 'Pending'"),
         ("o", "Mark the selected TODO as 'Ongoing'"),
         ("P", "Change the priority of the selected TODO"),
+        ("N", "Edit notes (supports Markdown)"),
+        ("Tab", "Toggle preview/edit mode (in notes)"),
+        ("Page Up/Down", "Scroll notes content"),
         ("M", "Toggle this main menu"),
         ("q", "Quit the application"),
         ("A", "Add a new TODO"),

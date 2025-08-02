@@ -51,6 +51,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             app.editing_notes,
             &app.notes_input,
             app.notes_scroll_offset,
+            app.notes_preview_mode,
         );
         return;
     }
