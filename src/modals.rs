@@ -1,11 +1,9 @@
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
-use ratatui::style::Styled;
 use ratatui::text::Span;
 use ratatui::widgets::{List, ListItem, ListState, Padding};
 use ratatui::{
-    Frame, Terminal,
-    backend::CrosstermBackend,
+    Frame,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
@@ -51,11 +49,11 @@ pub fn draw_todo_modal(
     f.render_widget(block, area);
 
     let inner_area = area.inner(Margin {
-        vertical: 2,
-        horizontal: 2,
+        vertical: 3,
+        horizontal: 4,
     });
 
-    // Create styled text with purple color scheme
+    // Create styled text with purple color scheme and better spacing
     let text = vec![
         Line::from(vec![
             "ID: ".fg(text_secondary),
@@ -111,22 +109,45 @@ pub fn draw_todo_modal(
         .wrap(Wrap { trim: true })
         .block(Block::default().style(Style::default().bg(background)));
 
-    // Split the inner area horizontally first - left 2/3 for main content, right 1/3 for notes
+    // Split the inner area horizontally first with better proportions and spacing
     let horizontal_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(67), Constraint::Percentage(33)].as_ref())
+        .constraints(
+            [
+                Constraint::Percentage(60),
+                Constraint::Min(2),
+                Constraint::Percentage(38),
+            ]
+            .as_ref(),
+        )
         .split(inner_area);
 
-    // Split the left area vertically for main content and subtasks
+    // Split the left area vertically for main content and subtasks with more balanced spacing
     let left_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+        .constraints(
+            [
+                Constraint::Percentage(50),
+                Constraint::Min(1),
+                Constraint::Percentage(48),
+            ]
+            .as_ref(),
+        )
         .split(horizontal_layout[0]);
 
-    // Render main todo information in the top-left
-    f.render_widget(paragraph, left_layout[0]);
+    // Render main todo information in the top-left with padding
+    let main_content_area = left_layout[0].inner(Margin {
+        horizontal: 2,
+        vertical: 1,
+    });
+    f.render_widget(paragraph, main_content_area);
 
-    // Create notes section in the top-right
+    // Create notes section in the right panel with better spacing
+    let notes_area = horizontal_layout[2].inner(Margin {
+        horizontal: 1,
+        vertical: 0,
+    });
+
     if editing_notes {
         // Show input field for editing notes
         let notes_input_text = vec![
@@ -146,10 +167,11 @@ pub fn draw_todo_modal(
                             .fg(Color::Rgb(220, 180, 100))
                             .add_modifier(Modifier::BOLD),
                     )
-                    .style(Style::default().bg(background).fg(text_primary)),
+                    .style(Style::default().bg(background).fg(text_primary))
+                    .padding(Padding::new(1, 1, 1, 1)),
             );
 
-        f.render_widget(notes_paragraph, horizontal_layout[1]);
+        f.render_widget(notes_paragraph, notes_area);
     } else {
         // Show read-only notes
         let notes_text = vec![
@@ -163,13 +185,14 @@ pub fn draw_todo_modal(
                 .title(" Notes ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD))
-                .style(Style::default().bg(background).fg(text_primary)),
+                .style(Style::default().bg(background).fg(text_primary))
+                .padding(Padding::new(1, 1, 1, 1)),
         );
 
-        f.render_widget(notes_paragraph, horizontal_layout[1]);
+        f.render_widget(notes_paragraph, notes_area);
     }
 
-    // Create a list for subtasks
+    // Create a list for subtasks with better spacing
     let subtask_items: Vec<ListItem> = todo
         .subtasks
         .iter()
@@ -203,7 +226,7 @@ pub fn draw_todo_modal(
                 .fg(Color::Rgb(180, 140, 220))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD))
-                .padding(Padding::new(1, 1, 0, 1))
+                .padding(Padding::new(2, 2, 1, 1))
                 .style(Style::default().bg(background).fg(text_primary)),
         )
         .highlight_style(
@@ -214,8 +237,8 @@ pub fn draw_todo_modal(
         // .highlight_symbol("|")
         .repeat_highlight_symbol(true);
 
-    // This is the critical change - use render_stateful_widget instead of render_widget
-    f.render_stateful_widget(subtask_list, left_layout[1], state);
+    // Render subtasks in the bottom-left with proper spacing
+    f.render_stateful_widget(subtask_list, left_layout[2], state);
 }
 
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -252,11 +275,18 @@ pub fn draw_delete_confirmation(f: &mut Frame, area: Rect) {
         .style(Style::default().bg(background))
         .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD));
 
-    let area = centered_rect(40, 20, area);
+    let area = centered_rect(45, 25, area);
     f.render_widget(block, area);
 
+    let inner_area = area.inner(Margin {
+        horizontal: 3,
+        vertical: 2,
+    });
+
     let text = vec![
+        Line::from(""),
         Line::from("Are you sure you want to delete this item?".fg(text_primary)),
+        Line::from(""),
         Line::from(""),
         Line::from(vec![
             Span::styled(
@@ -267,6 +297,7 @@ pub fn draw_delete_confirmation(f: &mut Frame, area: Rect) {
             ),
             Span::from(": Yes, delete".fg(text_secondary)),
         ]),
+        Line::from(""),
         Line::from(vec![
             Span::styled(
                 "N",
@@ -283,7 +314,7 @@ pub fn draw_delete_confirmation(f: &mut Frame, area: Rect) {
         .wrap(Wrap { trim: true })
         .block(Block::default().style(Style::default().bg(background)));
 
-    f.render_widget(paragraph, area);
+    f.render_widget(paragraph, inner_area);
 }
 
 // Status change confirmation
@@ -294,8 +325,8 @@ pub fn draw_priority_modal(f: &mut Frame, area: Rect) {
     let text_primary = Color::Rgb(230, 220, 240);
     let text_secondary = Color::Rgb(200, 180, 220);
 
-    // Calculate dynamic size (40% of width, 25% of height)
-    let modal_area = dynamic_rect(40, 25, area);
+    // Calculate dynamic size (45% of width, 30% of height)
+    let modal_area = dynamic_rect(45, 30, area);
 
     let block = Block::default()
         .title(" Priority Change ")
@@ -305,15 +336,16 @@ pub fn draw_priority_modal(f: &mut Frame, area: Rect) {
 
     f.render_widget(block, modal_area);
 
-    // Inner area with padding
+    // Inner area with better padding
     let inner_area = modal_area.inner(Margin {
-        horizontal: 2,
-        vertical: 1,
+        horizontal: 3,
+        vertical: 2,
     });
 
     let text = vec![
         Line::from(""),
         Line::from("Set priority for this TODO".fg(text_primary)),
+        Line::from(""),
         Line::from(""),
         Line::from(vec![
             Span::styled(
@@ -324,6 +356,7 @@ pub fn draw_priority_modal(f: &mut Frame, area: Rect) {
             ),
             Span::from(": High priority".fg(text_secondary)),
         ]),
+        Line::from(""),
         Line::from(vec![
             Span::styled(
                 "M",
@@ -333,6 +366,7 @@ pub fn draw_priority_modal(f: &mut Frame, area: Rect) {
             ),
             Span::from(": Medium priority".fg(text_secondary)),
         ]),
+        Line::from(""),
         Line::from(vec![
             Span::styled(
                 "L",
@@ -361,8 +395,8 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
     let text_secondary = Color::Rgb(200, 180, 220);
     let key_color = Color::Rgb(220, 180, 100);
 
-    // Modal dimensions
-    let modal_area = dynamic_rect(80, 70, area);
+    // Modal dimensions with better sizing
+    let modal_area = dynamic_rect(85, 75, area);
 
     // Main block for the modal
     let block = Block::default()
@@ -376,10 +410,10 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
         );
     f.render_widget(block, modal_area);
 
-    // Inner layout for content
+    // Inner layout for content with better spacing
     let inner_area = modal_area.inner(Margin {
-        horizontal: 4,
-        vertical: 2,
+        horizontal: 5,
+        vertical: 3,
     });
 
     // Keybindings data
@@ -413,12 +447,12 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
         })
         .collect();
 
-    // Create the table
+    // Create the table with better spacing
     let table = Table::new(
         rows,
         [
-            // Constraint for key column
-            Constraint::Length(10),
+            // Constraint for key column with more space
+            Constraint::Length(15),
             // Constraint for description column
             Constraint::Fill(1),
         ],
@@ -429,7 +463,7 @@ pub fn draw_main_menu_modal(f: &mut Frame, area: Rect) {
             .borders(Borders::NONE)
             .style(Style::default().fg(text_primary)),
     )
-    .column_spacing(3);
+    .column_spacing(5);
 
     // Render the table
     f.render_widget(table, inner_area);
