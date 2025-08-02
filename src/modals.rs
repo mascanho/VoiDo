@@ -30,6 +30,7 @@ pub fn draw_todo_modal(
     state: &mut ListState,
     editing_notes: bool,
     notes_input: &crate::search::InputField,
+    notes_scroll_offset: u16,
 ) {
     // Elegant purple color palette
     let background = Color::Rgb(25, 15, 30); // Deep purple
@@ -149,47 +150,171 @@ pub fn draw_todo_modal(
     });
 
     if editing_notes {
-        // Show input field for editing notes
-        let notes_input_text = vec![
-            Line::from(vec!["NOTES (ESC to save): ".fg(text_secondary)]),
-            Line::from(""),
-            Line::from(notes_input.value.as_str().fg(text_primary)),
-        ];
+        // Create a block for the notes editing area
+        let notes_block = Block::default()
+            .title(" Editing Notes ")
+            .borders(Borders::ALL)
+            .border_style(
+                Style::default()
+                    .fg(Color::Rgb(220, 180, 100))
+                    .add_modifier(Modifier::BOLD),
+            )
+            .style(Style::default().bg(background).fg(text_primary));
 
-        let notes_paragraph = Paragraph::new(notes_input_text)
-            .wrap(Wrap { trim: true })
-            .block(
-                Block::default()
-                    .title(" Editing Notes ")
-                    .borders(Borders::ALL)
-                    .border_style(
-                        Style::default()
-                            .fg(Color::Rgb(220, 180, 100))
-                            .add_modifier(Modifier::BOLD),
-                    )
-                    .style(Style::default().bg(background).fg(text_primary))
-                    .padding(Padding::new(1, 1, 1, 1)),
-            );
+        // Render the block first
+        f.render_widget(notes_block, notes_area);
 
-        f.render_widget(notes_paragraph, notes_area);
+        // Get the inner area for the input content
+        let inner_notes_area = notes_area.inner(Margin {
+            horizontal: 1,
+            vertical: 1,
+        });
+
+        // Create the header line
+        let header =
+            Paragraph::new("NOTES (ESC to save):").style(Style::default().fg(text_secondary));
+
+        // Split the inner area for header and content
+        let notes_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(1)].as_ref())
+            .split(inner_notes_area);
+
+        f.render_widget(header, notes_layout[0]);
+
+        // Render the input content with cursor
+        let content_area = notes_layout[1];
+        let visible_height = content_area.height;
+
+        // Split notes by single newlines to preserve all line breaks
+        let lines: Vec<&str> = notes_input.value.split('\n').collect();
+        let mut display_lines = Vec::new();
+
+        // Calculate scroll bounds
+        let total_lines = lines.len()
+            + if notes_input.active && notes_input.cursor_line >= lines.len() {
+                1
+            } else {
+                0
+            };
+        let max_scroll = if total_lines > visible_height as usize {
+            total_lines - visible_height as usize
+        } else {
+            0
+        };
+        let scroll_offset = (notes_scroll_offset as usize).min(max_scroll);
+
+        // Only render visible lines based on scroll offset
+        let start_line = scroll_offset;
+        let end_line = (start_line + visible_height as usize).min(lines.len());
+
+        for line_idx in start_line..end_line {
+            let line = lines[line_idx];
+            if line_idx == notes_input.cursor_line && notes_input.active {
+                // This is the line with the cursor - insert cursor character
+                let mut line_with_cursor = line.to_string();
+                let cursor_pos = notes_input.cursor_col.min(line.len());
+                line_with_cursor.insert(cursor_pos, '█'); // Block cursor character
+                display_lines.push(Line::from(line_with_cursor.fg(text_primary)));
+            } else {
+                display_lines.push(Line::from(line.fg(text_primary)));
+            }
+        }
+
+        // If we're at the end and on a new line, show cursor on empty line
+        if notes_input.active && notes_input.cursor_line >= lines.len() {
+            let cursor_line_in_view = notes_input.cursor_line - start_line;
+            if cursor_line_in_view < visible_height as usize {
+                // Pad with empty lines if needed
+                while display_lines.len() <= cursor_line_in_view {
+                    display_lines.push(Line::from(""));
+                }
+                if display_lines.len() == cursor_line_in_view {
+                    display_lines.push(Line::from("█".fg(text_primary)));
+                }
+            }
+        }
+
+        let content_paragraph = Paragraph::new(display_lines)
+            .wrap(Wrap { trim: false })
+            .style(Style::default().bg(background));
+
+        f.render_widget(content_paragraph, content_area);
+
+        // Add scroll indicator if content is scrollable
+        if total_lines > visible_height as usize {
+            let scroll_indicator = format!("({}/{})", scroll_offset + 1, total_lines);
+            let indicator_area = Rect {
+                x: notes_area.x + notes_area.width - scroll_indicator.len() as u16 - 2,
+                y: notes_area.y,
+                width: scroll_indicator.len() as u16 + 1,
+                height: 1,
+            };
+            let indicator_widget =
+                Paragraph::new(scroll_indicator).style(Style::default().fg(text_secondary));
+            f.render_widget(indicator_widget, indicator_area);
+        }
     } else {
-        // Show read-only notes
-        let notes_text = vec![
+        // Show read-only notes - split by paragraphs
+        let mut notes_lines = vec![
             Line::from(vec!["NOTES (N to edit): ".fg(text_secondary)]),
             Line::from(""),
-            Line::from(todo.notes.as_str().fg(text_primary)),
         ];
 
-        let notes_paragraph = Paragraph::new(notes_text).wrap(Wrap { trim: true }).block(
-            Block::default()
-                .title(" Notes ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD))
-                .style(Style::default().bg(background).fg(text_primary))
-                .padding(Padding::new(1, 1, 1, 1)),
-        );
+        // Split notes by single newlines to preserve all line breaks
+        let lines: Vec<&str> = todo.notes.split('\n').collect();
+        for line in lines.iter() {
+            notes_lines.push(Line::from(line.fg(text_primary)));
+        }
+
+        // Calculate visible area for read-only mode
+        let notes_block = Block::default()
+            .title(" Notes ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD))
+            .style(Style::default().bg(background).fg(text_primary))
+            .padding(Padding::new(1, 1, 1, 1));
+
+        let inner_area = notes_block.inner(notes_area);
+        let visible_height = inner_area.height;
+
+        // Apply scrolling to read-only notes
+        let total_lines = notes_lines.len();
+        let max_scroll = if total_lines > visible_height as usize {
+            total_lines - visible_height as usize
+        } else {
+            0
+        };
+        let scroll_offset = (notes_scroll_offset as usize).min(max_scroll);
+
+        // Get visible lines
+        let start_line = scroll_offset;
+        let end_line = (start_line + visible_height as usize).min(total_lines);
+        let visible_lines = if start_line < notes_lines.len() {
+            notes_lines[start_line..end_line].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        let notes_paragraph = Paragraph::new(visible_lines)
+            .wrap(Wrap { trim: true })
+            .block(notes_block);
 
         f.render_widget(notes_paragraph, notes_area);
+
+        // Add scroll indicator for read-only mode if content is scrollable
+        if total_lines > visible_height as usize {
+            let scroll_indicator = format!("({}/{})", scroll_offset + 1, total_lines);
+            let indicator_area = Rect {
+                x: notes_area.x + notes_area.width - scroll_indicator.len() as u16 - 2,
+                y: notes_area.y,
+                width: scroll_indicator.len() as u16 + 1,
+                height: 1,
+            };
+            let indicator_widget =
+                Paragraph::new(scroll_indicator).style(Style::default().fg(text_secondary));
+            f.render_widget(indicator_widget, indicator_area);
+        }
     }
 
     // Create a list for subtasks with better spacing

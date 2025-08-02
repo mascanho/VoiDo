@@ -58,6 +58,7 @@ pub struct App {
     pub notes: bool,
     pub notes_input: InputField,
     pub editing_notes: bool,
+    pub notes_scroll_offset: u16,
 }
 
 impl App {
@@ -80,8 +81,9 @@ impl App {
             fuzzy_search: FuzzySearch::new(),
             filtered_indices,
             notes: false,
-            notes_input: InputField::new("Notes"),
+            notes_input: InputField::new_multiline("Notes"),
             editing_notes: false,
+            notes_scroll_offset: 0,
         }
     }
 
@@ -149,6 +151,44 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    // SCROLL NOTES FUNCTIONALITY
+    fn scroll_notes_up(&mut self) {
+        if self.notes_scroll_offset > 0 {
+            self.notes_scroll_offset -= 1;
+        }
+    }
+
+    fn scroll_notes_down(&mut self, max_lines: u16, visible_height: u16) {
+        if max_lines > visible_height && self.notes_scroll_offset < max_lines - visible_height {
+            self.notes_scroll_offset += 1;
+        }
+    }
+
+    fn auto_scroll_to_cursor(&mut self, visible_height: u16) {
+        if !self.editing_notes {
+            return;
+        }
+
+        let cursor_line = self.notes_input.cursor_line as u16;
+
+        // Scroll down if cursor is below visible area
+        if cursor_line >= self.notes_scroll_offset + visible_height {
+            self.notes_scroll_offset = cursor_line - visible_height + 1;
+        }
+
+        // Scroll up if cursor is above visible area
+        if cursor_line < self.notes_scroll_offset {
+            self.notes_scroll_offset = cursor_line;
+        }
+    }
+
+    fn calculate_notes_visible_height(&self) -> u16 {
+        // Estimate the visible height for notes area based on modal size
+        // This is approximate - in a real implementation you'd pass the actual area size
+        // For now, use a reasonable default that works with typical terminal sizes
+        8 // This accounts for modal borders, header, and other UI elements
     }
 
     // UPDATE TODO NOTES
@@ -296,6 +336,7 @@ impl App {
         self.editing_notes = false;
         self.notes_input.unfocus();
         self.notes_input.value.clear();
+        self.notes_scroll_offset = 0;
 
         // Re-apply filter if there's text in the search input
         if !self.fuzzy_search.input.value.is_empty() {
@@ -367,8 +408,19 @@ async fn main() -> Result<(), io::Error> {
                             app.editing_notes = false;
                             app.notes_input.unfocus();
                         }
+                        KeyCode::PageUp => {
+                            app.scroll_notes_up();
+                        }
+                        KeyCode::PageDown => {
+                            let visible_height = app.calculate_notes_visible_height();
+                            let max_lines = app.notes_input.value.lines().count() as u16;
+                            app.scroll_notes_down(max_lines, visible_height);
+                        }
                         _ => {
                             app.notes_input.handle_event(&Event::Key(key));
+                            // Auto-scroll to keep cursor visible
+                            let visible_height = app.calculate_notes_visible_height();
+                            app.auto_scroll_to_cursor(visible_height);
                         }
                     }
                     continue;
@@ -495,6 +547,19 @@ async fn main() -> Result<(), io::Error> {
                             app.editing_notes = true;
                             app.notes_input.value = todo.notes.clone();
                             app.notes_input.focus();
+                            app.notes_scroll_offset = 0; // Reset scroll when starting to edit
+                        }
+                    }
+
+                    // Scroll notes in read-only mode
+                    KeyCode::PageUp if app.show_modal && !app.editing_notes => {
+                        app.scroll_notes_up();
+                    }
+                    KeyCode::PageDown if app.show_modal && !app.editing_notes => {
+                        if let Some(todo) = &app.selected_todo {
+                            let visible_height = app.calculate_notes_visible_height();
+                            let max_lines = todo.notes.lines().count() as u16 + 2; // +2 for header lines
+                            app.scroll_notes_down(max_lines, visible_height);
                         }
                     }
 

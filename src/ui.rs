@@ -50,6 +50,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             &mut app.subtask_state,
             app.editing_notes,
             &app.notes_input,
+            app.notes_scroll_offset,
         );
         return;
     }
