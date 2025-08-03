@@ -4,17 +4,17 @@ use crate::modals::{
     draw_todo_modal,
 };
 use crate::search::InputField;
-use crate::{App, database};
+use crate::{database, App};
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
 use ratatui::text::Span;
 use ratatui::{
-    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
+    Frame, Terminal,
 };
 
 // MAIN UI
@@ -93,7 +93,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
                         _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)),
                     },
                     todo.topic.clone().fg(text_primary),
-                    todo.text.clone().fg(text_secondary),
+                    // Highlight the todos with notes in them
+                    if todo.notes.is_empty() {
+                        todo.text.clone().fg(text_primary)
+                    } else {
+                        format!("{} [✏️]", todo.text).fg(text_primary)
+                    },
                     todo.subtasks.len().to_string().fg(text_secondary),
                     todo.date_added.clone().fg(text_secondary),
                     todo.due.clone().fg(text_secondary),
@@ -124,7 +129,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
                         _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)),
                     },
                     todo.topic.clone().fg(text_primary),
-                    todo.text.clone().fg(text_secondary),
+                    // Highlight the todos with notes in them
+                    if todo.notes.is_empty() {
+                        todo.text.clone().fg(text_primary)
+                    } else {
+                        format!("{} [✏️]", todo.text).fg(text_primary)
+                    },
                     todo.subtasks.len().to_string().fg(text_secondary),
                     todo.date_added.clone().fg(text_secondary),
                     todo.due.clone().fg(text_secondary),
@@ -150,11 +160,11 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         [
             Constraint::Length(5),  // ID
             Constraint::Min(10),    // PRIORITY
-            Constraint::Min(13),    // TOPIC
+            Constraint::Min(18),    // TOPIC
             Constraint::Fill(35),   // TODO
             Constraint::Length(8),  // SUBs
             Constraint::Length(10), // CREATED
-            Constraint::Length(15), // DUE
+            Constraint::Length(10), // DUE
             Constraint::Min(10),    // STATUS
             Constraint::Min(10),    // OWNER
         ],

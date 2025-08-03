@@ -6,17 +6,17 @@ use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use data::sample_todos;
 use ratatui::widgets::{ListState, TableState};
 use ratatui::{
-    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
+    Frame, Terminal,
 };
 use search::{FuzzySearch, InputField};
 use std::io;
@@ -33,7 +33,9 @@ mod markdown;
 mod modals; // All the modals logic
 mod search;
 mod ui; // ALL THE UI STUFF
-mod xls; // Fuzy serach and UI input logic // Markdown parsing for notes
+
+// Import Export TODOS
+mod import_export;
 
 #[derive(Debug)]
 pub enum InputMode {
@@ -710,11 +712,29 @@ async fn main() -> Result<(), io::Error> {
     }
     // Import todos from excel file
     else if let Some(file_path) = cli.import {
-        let _workbook = xls::import_todos(&file_path);
+        // Check the file path and extension
+        if file_path.ends_with(".xlsx") {
+            let _workbook = import_export::xls::import_todos(&file_path);
+        } else {
+            import_export::json::import_from_json(&file_path);
+        }
     }
-    // Export TODOs into Excel File
+    // Export TODOs/
     else if cli.export {
-        let _workbook = xls::export_todos();
+        println!("Export options:");
+        println!("1. JSON");
+        println!("2. Excel");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+
+        if input == "1" {
+            let _workbook = import_export::json::export_to_json();
+        } else if input == "2" {
+            let _workbook = import_export::xls::export_todos_xls();
+        } else {
+            println!("Invalid option");
+        }
     }
     // PROMPT GEMINI
     else if let Some(prompt) = cli.prompt {

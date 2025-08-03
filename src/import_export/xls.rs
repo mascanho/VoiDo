@@ -4,11 +4,11 @@ use crate::{
     arguments::models::{Subtask, Todo},
     database::DBtodo,
 };
-use calamine::{Data, DataType, Reader, Xlsx, open_workbook};
+use calamine::{open_workbook, Data, DataType, Reader, Xlsx};
 use rusqlite::params;
 use xlsxwriter::*;
 
-pub fn export_todos() -> Result<(), XlsxError> {
+pub fn export_todos_xls() -> Result<(), Box<dyn std::error::Error>> {
     let db = DBtodo::new().expect("Failed to initialize database");
     let todos = db.get_todos().expect("Failed to get todos");
 
@@ -91,6 +91,7 @@ pub fn export_todos() -> Result<(), XlsxError> {
     println!("\n🤖 Todos exported to VoiDo - Todos Export.xlsx\n");
     Ok(())
 }
+
 // TODO: Add support for Appending TODOS to the existing ones in the DB
 // IMPORT TODOs
 pub fn import_todos(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {

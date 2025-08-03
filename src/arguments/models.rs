@@ -1,6 +1,7 @@
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Todo {
     pub id: usize,
     pub priority: String,
@@ -15,7 +16,7 @@ pub struct Todo {
     pub notes: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subtask {
     pub todo_id: usize,
     pub subtask_id: usize,
@@ -70,11 +71,11 @@ pub struct Cli {
     pub status: Option<String>,
 
     /// Mark a todo as done by ID
-    #[arg(short = 'C', long = "done", value_name = "ID")]
+    #[arg(short = 'c', long = "done", value_name = "ID")]
     pub done: Option<i32>,
 
     /// Clear all todos
-    #[arg(short = 'c', long)]
+    #[arg(short = 'C', long)]
     pub clear: bool,
 
     /// Show all options

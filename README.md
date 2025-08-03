@@ -15,6 +15,7 @@
 - **Excel Export/Import**: Export your todos to an Excel file for easy sharing and import them back.
 - **Persistent Storage**: Your todos are saved locally in a SQLite database, ensuring your data is always safe.
 - **Configuration File**: Automatically creates a configuration file to manage settings like API keys.
+- **Markdown Support**: View todos with rich text formatting, including bold, italics, code blocks, and more.
 
 ## 🚀 Installation
 
@@ -238,5 +239,4 @@ This project is licensed under the MIT License.
 ## 📝 TODO/ROADMAP
 
 - [ ] Offline Sync
-- [ ] Markdown Support
 - [ ] GUI Client
