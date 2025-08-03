@@ -571,7 +571,6 @@ async fn main() -> Result<(), io::Error> {
                         }
                     }
 
-                    //////
                     KeyCode::Char('d') => {
                         if let Some(selected) = app.state.selected() {
                             if selected < app.todos.len() {

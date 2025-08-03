@@ -149,11 +149,11 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         rows,
         [
             Constraint::Length(5),  // ID
-            Constraint::Min(12),    // PRIORITY
-            Constraint::Min(20),    // TOPIC
+            Constraint::Min(10),    // PRIORITY
+            Constraint::Min(13),    // TOPIC
             Constraint::Fill(35),   // TODO
             Constraint::Length(8),  // SUBs
-            Constraint::Length(12), // CREATED
+            Constraint::Length(10), // CREATED
             Constraint::Length(15), // DUE
             Constraint::Min(10),    // STATUS
             Constraint::Min(10),    // OWNER

@@ -17,13 +17,18 @@ pub fn add_todo(
     let date_added = Local::now().format("%d-%m-%y").to_string();
     let topic = topic.unwrap_or_else(|| "General".to_string());
 
+    // Set a max length on the topic to ensure proper size constraints
+    if topic.len() > 10 {
+        // shorten the topic by adding "..." at the end
+        // if the topic is longer than 10 characters
+        let shortened_topic = &topic[..10];
+        // return Err("Topic must be 10 characters or less.".into());
+    }
+
     // handle priority
     let priority = priority.unwrap_or_else(|| "normal".to_string());
     let priority = priority.to_lowercase();
     // Uppercase only the first letter
-    if priority != "low" && priority != "medium" && priority != "high" {
-        return Err("Priority must be 'medium', 'high', or 'low'.".into());
-    }
     let priority = priority
         .chars()
         .next()
@@ -52,6 +57,8 @@ pub fn add_todo(
         .to_ascii_uppercase()
         .to_string()
         + &topic[1..];
+
+    let topic = topic[..12].to_string(); // Ensure topic is at most 10 characters long
 
     // Ensure the text first chartacter is always capital cased
     let text = text
