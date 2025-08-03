@@ -1,6 +1,6 @@
 use crate::arguments::models::Todo;
-use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use ratatui::{
     crossterm::event::{self, Event, KeyCode},
     layout::*,
@@ -58,14 +58,16 @@ impl FuzzySearch {
             // Fuzzy match against all todo fields
             for (idx, todo) in todos.iter().enumerate() {
                 let combined_text = format!(
-                    "{} {} {} {} {} {} {}",
+                    "{} {} {} {} {} {} {} {} {:?}",
                     todo.id,
                     todo.priority,
                     todo.topic,
                     todo.text,
                     todo.status,
                     todo.owner,
-                    todo.notes
+                    todo.notes,
+                    todo.due,
+                    todo.subtasks
                 );
                 if self
                     .matcher
