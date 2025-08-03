@@ -55,6 +55,7 @@ impl FuzzySearch {
             // Show all items when search is empty
             self.matched_indices.extend(0..todos.len());
         } else {
+            // TODO: Implement fuzzy matching with SkimMatcherV2
             // Fuzzy match against all todo fields
             for (idx, todo) in todos.iter().enumerate() {
                 let combined_text = format!(
