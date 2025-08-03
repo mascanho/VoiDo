@@ -11,11 +11,12 @@
 - **Fuzzy Search**: Quickly filter and find todos by typing in the search bar, which searches across all todo fields.
 - **AI-Powered Suggestions**: Leverage the power of Google's Gemini to get task suggestions based on your prompts.
 - **Comprehensive Task Management**: Add, delete, and update tasks with details like topics, priorities, owners, and due dates.
+- **Subtask Management**: Add, delete, and update subtasks for each todo.
+- **Notes with Markdown**: Add and edit notes for your todos using Markdown for rich text formatting.
 - **Flexible Commands**: Use a wide range of flags to manage your todos without ever leaving the command line.
-- **Excel Export/Import**: Export your todos to an Excel file for easy sharing and import them back.
+- **Excel & JSON Export/Import**: Export your todos to an Excel or JSON file for easy sharing and import them back.
 - **Persistent Storage**: Your todos are saved locally in a SQLite database, ensuring your data is always safe.
 - **Configuration File**: Automatically creates a configuration file to manage settings like API keys.
-- **Markdown Support**: View todos with rich text formatting, including bold, italics, code blocks, and more.
 
 ## 🚀 Installation
 
@@ -25,7 +26,7 @@ Once Rust is set up, clone the repository and install the application:
 
 ```bash
 git clone https://github.com/mascanho/VoiDo.git
-cd rustydo
+cd VoiDo
 cargo install --path .
 ```
 
@@ -39,9 +40,9 @@ The first time you run `voido`, it will automatically create a `config.toml` fil
 2. **Set the key**: You can set the API key using the following command:
 
    ```bash
-   VoiDo -k YOUR_API_KEY
+   voido -k YOUR_API_KEY
    # or
-   VoiDo --apikey YOUR_API_KEY
+   voido --apikey YOUR_API_KEY
    ```
 
    This will securely save your key to the configuration file.
@@ -68,13 +69,19 @@ voido --list
 - **Change Status**:
   - `p`: Mark as "Pending".
   - `o`: Mark as "Ongoing".
-  - `f`: Mark as "Done".
+  - `d`: Mark as "Done".
 - **Change Priority**:
   - `P`: Open the priority menu.
   - `L`: Mark as "Low".
   - `M`: Mark as "Medium".
   - `H`: Mark as "High".
-- **Delete Todo**: `d` to open a confirmation dialog, then `y` to confirm or `n` to cancel.
+- **Delete Todo**: `x` to open a confirmation dialog, then `y` to confirm or `n` to cancel.
+- **Subtask Navigation**: `j`/`k` or `Down`/`Up` to navigate subtasks in the details modal.
+- **Change Subtask Status**: `d` to mark a subtask as "Done" or "Pending" in the details modal.
+- **Delete Subtask**: `x` to delete a subtask in the details modal.
+- **Edit Notes**: `N` to start editing notes in the details modal.
+- **Scroll Notes**: `PageUp`/`PageDown` to scroll through notes.
+- **Toggle Notes Preview**: `Tab` to switch between Markdown and rendered view.
 - **Close Modals**: `Esc` to close any open modal.
 - **Quit**: `q` to exit the application.
 
@@ -116,6 +123,12 @@ voido --add "Deploy the new feature to production" --desc "Ensure all tests pass
 - `-p, --priority <PRIORITY>`: Priority level (e.g., "High", "Medium", "Low"). (Optional)
 - `-o, --owner <OWNER>`: The person responsible for the task. (Optional)
 - `-d, --due <DATE>`: A due date for the task. (Optional)
+
+**Add a subtask to an existing todo:**
+
+```bash
+voido --subtask <ID> <TEXT>
+```
 
 **Delete a todo:**
 
@@ -159,9 +172,9 @@ voido -f
 voido --flush
 ```
 
-#### 📂 Excel Export/Import
+#### 📂 Excel & JSON Export/Import
 
-**Export all todos to an Excel file:**
+**Export all todos:**
 
 ```bash
 voido -E
@@ -169,7 +182,7 @@ voido -E
 voido --export
 ```
 
-**Import todos from an Excel file:**
+**Import todos from a file:**
 
 ```bash
 voido -I <FILE_PATH>
@@ -227,6 +240,7 @@ voido --help
 - [Directories](https://docs.rs/directories/latest/directories/) (for finding config paths)
 - [Calamine](https://docs.rs/calamine/latest/calamine/) (for reading Excel files)
 - [Xlsxwriter](https://docs.rs/xlsxwriter/latest/xlsxwriter/) (for writing Excel files)
+- [pulldown-cmark](https://docs.rs/pulldown-cmark/latest/pulldown_cmark/) (for Markdown rendering)
 
 ## 🙌 Contributing
 

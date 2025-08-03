@@ -84,6 +84,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             .iter()
             .map(|&i| &app.todos[i])
             .map(|todo| {
+                let subtasks_finished = todo
+                    .subtasks
+                    .iter()
+                    .filter(|subtask| subtask.status == "Done" || subtask.status == "Completed")
+                    .count();
+
                 Row::new(vec![
                     todo.id.to_string().fg(text_primary),
                     match todo.priority.to_lowercase().as_str() {
@@ -99,7 +105,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
                     } else {
                         format!("{} [✏️]", todo.text).fg(text_primary)
                     },
-                    todo.subtasks.len().to_string().fg(text_secondary),
+                    format!("{}/{}", subtasks_finished, todo.subtasks.len()).fg(text_secondary),
                     todo.date_added.clone().fg(text_secondary),
                     todo.due.clone().fg(text_secondary),
                     match todo.status.as_str() {
@@ -120,6 +126,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         app.todos
             .iter()
             .map(|todo| {
+                let subtasks_finished = todo
+                    .subtasks
+                    .iter()
+                    .filter(|subtask| subtask.status == "Done" || subtask.status == "Completed")
+                    .count();
+
                 Row::new(vec![
                     todo.id.to_string().fg(text_primary),
                     match todo.priority.to_lowercase().as_str() {
@@ -135,7 +147,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
                     } else {
                         format!("{} [✏️]", todo.text).fg(text_primary)
                     },
-                    todo.subtasks.len().to_string().fg(text_secondary),
+                    format!("{}/{}", subtasks_finished, todo.subtasks.len()).fg(text_secondary),
                     todo.date_added.clone().fg(text_secondary),
                     todo.due.clone().fg(text_secondary),
                     match todo.status.as_str() {
@@ -171,7 +183,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
     )
     .header(
         Row::new(vec![
-            "ID", "PRIORITY", "TOPIC", "TODO", "SUBs", "CREATED", "DUE DATE", "STATUS", "OWNER",
+            "ID", "PRIORITY", "TOPIC", "TODO", "SUBt", "CREATED", "DUE DATE", "STATUS", "OWNER",
         ])
         .style(Style::default().fg(accent).add_modifier(Modifier::BOLD)),
     )

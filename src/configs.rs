@@ -2,8 +2,10 @@ use anyhow::{Context, Result};
 use directories::BaseDirs;
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct AppConfigs {
     pub model: String,
+    pub repo_name: String,
 }
 
 impl AppConfigs {
@@ -25,6 +27,10 @@ impl AppConfigs {
             model: config["GEMINI"]["model"]
                 .as_str()
                 .context("Missing or invalid model in config")?
+                .to_string(),
+            repo_name: config["GITHUB"]["repo_name"]
+                .as_str()
+                .context("Missing or invalid github_repo in config")?
                 .to_string(),
         })
     }
@@ -51,12 +57,38 @@ impl AppConfigs {
         // Write default config
         let default_config = r#"
 [GEMINI]
-model = "gemini-pro"  # Changed to Gemini since that's what you're using
+model = "gemini-pro"
+
+[GITHUB]
+repo_name = "voido_sync"
+
+
+
 "#;
 
         std::fs::write(&config_file, default_config.trim())
             .with_context(|| format!("Failed to write config to {:?}", config_file))?;
 
         Ok(())
+    }
+
+    pub fn read_configs_from_file() -> Result<AppConfigs> {
+        let config_file = Self::get_config_path()?;
+        let config_content = std::fs::read_to_string(&config_file)
+            .with_context(|| format!("Failed to read config at {:?}", config_file))?;
+
+        let config: toml::Value =
+            toml::from_str(&config_content).context("Failed to parse config file")?;
+
+        Ok(AppConfigs {
+            model: config["GEMINI"]["model"]
+                .as_str()
+                .context("Missing or invalid model in config")?
+                .to_string(),
+            repo_name: config["GITHUB"]["repo_name"]
+                .as_str()
+                .context("Missing or invalid github_repo in config")?
+                .to_string(),
+        })
     }
 }

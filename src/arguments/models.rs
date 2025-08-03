@@ -110,6 +110,10 @@ pub struct Cli {
     #[arg(short = 'I', long, value_name = "FILE")]
     pub import: Option<String>,
 
+    // SYNC WITH GITHUG REPO
+    #[arg(short = 'G', long, value_name = "GITHUB")]
+    pub github: bool,
+
     // Pass sub tasks that are part of a todo
     #[arg(short = 's', long, value_name = "SUB TASKS", requires = "add")]
     pub sub: Option<Vec<String>>,

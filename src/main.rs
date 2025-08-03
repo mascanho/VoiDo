@@ -32,6 +32,7 @@ mod database;
 mod markdown;
 mod modals; // All the modals logic
 mod search;
+mod sync;
 mod ui; // ALL THE UI STUFF
 
 // Import Export TODOS
@@ -326,8 +327,19 @@ impl App {
 
     fn select_current(&mut self) {
         if let Some(index) = self.state.selected() {
-            if index < self.todos.len() {
-                self.selected_todo = Some(self.todos[index].clone());
+            // If we have filtered indices, map the selection index through filtered_indices
+            let actual_index = if !self.filtered_indices.is_empty() {
+                if index < self.filtered_indices.len() {
+                    self.filtered_indices[index]
+                } else {
+                    return; // Invalid index
+                }
+            } else {
+                index
+            };
+
+            if actual_index < self.todos.len() {
+                self.selected_todo = Some(self.todos[actual_index].clone());
                 self.show_modal = true;
             }
         }
@@ -383,6 +395,8 @@ impl App {
 async fn main() -> Result<(), io::Error> {
     // Create the configs
     let _ = configs::AppConfigs::create_default_config();
+
+    // Backup the existing TODOS
 
     let cli = Cli::parse();
 
@@ -701,6 +715,12 @@ async fn main() -> Result<(), io::Error> {
         )?;
         terminal.show_cursor()?;
     }
+    //
+    // Sync with Github
+    else if cli.github {
+        println!("Syncing with Github...");
+        sync::handle_github_sync();
+    }
     // Append subtask to already existing TODO
     else if !cli.subtasks.is_empty() {
         for (id, text) in &cli.subtasks {
@@ -811,7 +831,7 @@ async fn main() -> Result<(), io::Error> {
     // Clear all todos
     else if cli.clear {
         match arguments::delete_todo::clear_todos() {
-            Ok(_) => println!("Todos deleted successfully!"),
+            Ok(_) => return Ok(()),
             Err(e) => eprintln!("Error deleting todos: {}", e),
         }
     }

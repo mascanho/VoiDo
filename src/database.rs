@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use directories::BaseDirs;
-use rusqlite::{Connection, Result, params};
+use rusqlite::{params, Connection, Result};
 
 use crate::arguments::models::{Subtask, Todo};
 
