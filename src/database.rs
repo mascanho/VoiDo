@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use directories::BaseDirs;
-use rusqlite::{Connection, Result, params};
+use rusqlite::{params, Connection, Result};
 
 use crate::arguments::models::{Subtask, Todo};
 
@@ -69,7 +69,8 @@ impl DBtodo {
                 date_added TEXT NOT NULL,
                 due TEXT,
                 status TEXT NOT NULL,
-                owner TEXT NOT NULL
+                owner TEXT NOT NULL,
+                notes TEXT DEFAULT ''
             )",
             [],
         )?;
@@ -81,10 +82,29 @@ impl DBtodo {
                todo_id INTEGER NOT NULL,
                text TEXT NOT NULL,
                status TEXT NOT NULL,
-               FOREIGN KEY (todo_id) REFERENCES todos(id)            
+               FOREIGN KEY (todo_id) REFERENCES todos(id)
 )",
             [],
         )?;
+
+        // Check if notes column exists and add it if it doesn't
+        {
+            let mut stmt = connection.prepare("PRAGMA table_info(todos)").unwrap();
+            let column_info: Vec<String> = stmt
+                .query_map([], |row| {
+                    let column_name: String = row.get(1)?;
+                    Ok(column_name)
+                })
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+
+            if !column_info.contains(&"notes".to_string()) {
+                connection
+                    .execute("ALTER TABLE todos ADD COLUMN notes TEXT DEFAULT ''", [])
+                    .unwrap();
+            }
+        }
 
         Ok(DBtodo { connection })
     }
@@ -102,8 +122,8 @@ impl DBtodo {
     pub fn add_todo(&self, todo: &Todo) -> Result<(), Box<dyn Error>> {
         // First insert the todo and get its ID
         self.connection.execute(
-            "INSERT INTO todos (priority, topic, text, desc, date_added, due, status, owner) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO todos (priority, topic, text, desc, date_added, due, status, owner, notes)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 &todo.priority,
                 &todo.topic,
@@ -112,7 +132,8 @@ impl DBtodo {
                 &todo.date_added,
                 &todo.due,
                 &todo.status,
-                &todo.owner
+                &todo.owner,
+                &todo.notes
             ],
         )?;
 
@@ -146,7 +167,7 @@ impl DBtodo {
     // SHOW ALL THE TODOS
     pub fn get_todos(&self) -> Result<Vec<Todo>, Box<dyn Error>> {
         let mut stmt = self.connection.prepare(
-            "SELECT id, priority, topic, text, desc, date_added, due, status, owner FROM todos",
+            "SELECT id, priority, topic, text, desc, date_added, due, status, owner, notes FROM todos",
         )?;
 
         let todos_iter = stmt.query_map(params![], |row| {
@@ -160,6 +181,7 @@ impl DBtodo {
                 due: row.get(6)?,
                 status: row.get(7)?,
                 owner: row.get(8)?,
+                notes: row.get(9).unwrap_or_default(),
                 subtasks: Vec::new(),
             })
         })?;
@@ -316,6 +338,20 @@ impl DBtodo {
             println!("✅ Subtask added successfully!");
         } else {
             println!("❌ No todo found with id: {}", todo_id);
+        }
+        Ok(())
+    }
+
+    // UPDATE TODO NOTES
+    pub fn update_notes(&self, id: i32, notes: String) -> Result<(), Box<dyn Error>> {
+        let changes = self.connection.execute(
+            "UPDATE todos SET notes = ? WHERE id = ?",
+            params![notes, id],
+        )?;
+        if changes > 0 {
+            return Ok(());
+        } else {
+            println!("❌ No todo found with id: {}", id);
         }
         Ok(())
     }

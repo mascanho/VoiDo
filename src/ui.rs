@@ -4,17 +4,17 @@ use crate::modals::{
     draw_todo_modal,
 };
 use crate::search::InputField;
-use crate::{App, database};
+use crate::{database, App};
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
 use ratatui::text::Span;
 use ratatui::{
-    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
+    Frame, Terminal,
 };
 
 // MAIN UI
@@ -48,6 +48,10 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             area,
             app.selected_todo.as_ref().unwrap(),
             &mut app.subtask_state,
+            app.editing_notes,
+            &app.notes_input,
+            app.notes_scroll_offset,
+            app.notes_preview_mode,
         );
         return;
     }
@@ -80,6 +84,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
             .iter()
             .map(|&i| &app.todos[i])
             .map(|todo| {
+                let subtasks_finished = todo
+                    .subtasks
+                    .iter()
+                    .filter(|subtask| subtask.status == "Done" || subtask.status == "Completed")
+                    .count();
+
                 Row::new(vec![
                     todo.id.to_string().fg(text_primary),
                     match todo.priority.to_lowercase().as_str() {
@@ -89,8 +99,13 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
                         _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)),
                     },
                     todo.topic.clone().fg(text_primary),
-                    todo.text.clone().fg(text_secondary),
-                    todo.subtasks.len().to_string().fg(text_secondary),
+                    // Highlight the todos with notes in them
+                    if todo.notes.is_empty() {
+                        todo.text.clone().fg(text_primary)
+                    } else {
+                        format!("{} [✏️]", todo.text).fg(text_primary)
+                    },
+                    format!("{}/{}", subtasks_finished, todo.subtasks.len()).fg(text_secondary),
                     todo.date_added.clone().fg(text_secondary),
                     todo.due.clone().fg(text_secondary),
                     match todo.status.as_str() {
@@ -111,6 +126,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         app.todos
             .iter()
             .map(|todo| {
+                let subtasks_finished = todo
+                    .subtasks
+                    .iter()
+                    .filter(|subtask| subtask.status == "Done" || subtask.status == "Completed")
+                    .count();
+
                 Row::new(vec![
                     todo.id.to_string().fg(text_primary),
                     match todo.priority.to_lowercase().as_str() {
@@ -120,8 +141,13 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
                         _ => todo.priority.clone().fg(Color::Rgb(120, 80, 200)),
                     },
                     todo.topic.clone().fg(text_primary),
-                    todo.text.clone().fg(text_secondary),
-                    todo.subtasks.len().to_string().fg(text_secondary),
+                    // Highlight the todos with notes in them
+                    if todo.notes.is_empty() {
+                        todo.text.clone().fg(text_primary)
+                    } else {
+                        format!("{} [✏️]", todo.text).fg(text_primary)
+                    },
+                    format!("{}/{}", subtasks_finished, todo.subtasks.len()).fg(text_secondary),
                     todo.date_added.clone().fg(text_secondary),
                     todo.due.clone().fg(text_secondary),
                     match todo.status.as_str() {
@@ -145,19 +171,19 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         rows,
         [
             Constraint::Length(5),  // ID
-            Constraint::Min(12),    // PRIORITY
-            Constraint::Min(20),    // TOPIC
+            Constraint::Min(10),    // PRIORITY
+            Constraint::Min(18),    // TOPIC
             Constraint::Fill(35),   // TODO
             Constraint::Length(8),  // SUBs
-            Constraint::Length(12), // CREATED
-            Constraint::Length(15), // DUE
+            Constraint::Length(10), // CREATED
+            Constraint::Length(10), // DUE
             Constraint::Min(10),    // STATUS
             Constraint::Min(10),    // OWNER
         ],
     )
     .header(
         Row::new(vec![
-            "ID", "PRIORITY", "TOPIC", "TODO", "SUBs", "CREATED", "DUE DATE", "STATUS", "OWNER",
+            "ID", "PRIORITY", "TOPIC", "TODO", "SUBt", "CREATED", "DUE DATE", "STATUS", "OWNER",
         ])
         .style(Style::default().fg(accent).add_modifier(Modifier::BOLD)),
     )

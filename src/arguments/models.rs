@@ -1,6 +1,7 @@
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Todo {
     pub id: usize,
     pub priority: String,
@@ -12,9 +13,10 @@ pub struct Todo {
     pub owner: String,
     pub due: String,
     pub subtasks: Vec<Subtask>,
+    pub notes: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subtask {
     pub todo_id: usize,
     pub subtask_id: usize,
@@ -69,11 +71,11 @@ pub struct Cli {
     pub status: Option<String>,
 
     /// Mark a todo as done by ID
-    #[arg(short = 'C', long = "done", value_name = "ID")]
+    #[arg(short = 'c', long = "done", value_name = "ID")]
     pub done: Option<i32>,
 
     /// Clear all todos
-    #[arg(short = 'c', long)]
+    #[arg(short = 'C', long)]
     pub clear: bool,
 
     /// Show all options
@@ -107,6 +109,10 @@ pub struct Cli {
     // Import todos from Excel file
     #[arg(short = 'I', long, value_name = "FILE")]
     pub import: Option<String>,
+
+    // SYNC WITH GITHUG REPO
+    #[arg(short = 'G', long, value_name = "GITHUB")]
+    pub github: bool,
 
     // Pass sub tasks that are part of a todo
     #[arg(short = 's', long, value_name = "SUB TASKS", requires = "add")]

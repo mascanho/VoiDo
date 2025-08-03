@@ -6,17 +6,17 @@ use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use data::sample_todos;
 use ratatui::widgets::{ListState, TableState};
 use ratatui::{
-    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
+    Frame, Terminal,
 };
 use search::{FuzzySearch, InputField};
 use std::io;
@@ -25,14 +25,18 @@ use ui::{calculate_stats, draw_ui};
 mod ai; // LLMS stuff
 mod args; // Print all the args available in the App so it does not clutter the main.rs
 mod arguments;
+mod colors;
 mod configs;
 mod data; // DATABASE STUFF;
 mod database;
+mod markdown;
 mod modals; // All the modals logic
 mod search;
-mod settings;
+mod sync;
 mod ui; // ALL THE UI STUFF
-mod xls; // Fuzy serach and UI input logic
+
+// Import Export TODOS
+mod import_export;
 
 #[derive(Debug)]
 pub enum InputMode {
@@ -55,6 +59,11 @@ pub struct App {
     pub input_mode: InputMode,
     pub fuzzy_search: FuzzySearch,
     pub filtered_indices: Vec<usize>,
+    pub notes: bool,
+    pub notes_input: InputField,
+    pub editing_notes: bool,
+    pub notes_scroll_offset: u16,
+    pub notes_preview_mode: bool,
 }
 
 impl App {
@@ -76,6 +85,11 @@ impl App {
             input_mode: InputMode::Normal,
             fuzzy_search: FuzzySearch::new(),
             filtered_indices,
+            notes: false,
+            notes_input: InputField::new_multiline("Notes"),
+            editing_notes: false,
+            notes_scroll_offset: 0,
+            notes_preview_mode: false,
         }
     }
 
@@ -142,6 +156,64 @@ impl App {
                 return Err("Selected index out of bounds!".into());
             }
         }
+        Ok(())
+    }
+
+    // SCROLL NOTES FUNCTIONALITY
+    fn scroll_notes_up(&mut self) {
+        if self.notes_scroll_offset > 0 {
+            self.notes_scroll_offset -= 1;
+        }
+    }
+
+    fn scroll_notes_down(&mut self, max_lines: u16, visible_height: u16) {
+        if max_lines > visible_height && self.notes_scroll_offset < max_lines - visible_height {
+            self.notes_scroll_offset += 1;
+        }
+    }
+
+    fn auto_scroll_to_cursor(&mut self, visible_height: u16) {
+        if !self.editing_notes {
+            return;
+        }
+
+        let cursor_line = self.notes_input.cursor_line as u16;
+
+        // Scroll down if cursor is below visible area
+        if cursor_line >= self.notes_scroll_offset + visible_height {
+            self.notes_scroll_offset = cursor_line - visible_height + 1;
+        }
+
+        // Scroll up if cursor is above visible area
+        if cursor_line < self.notes_scroll_offset {
+            self.notes_scroll_offset = cursor_line;
+        }
+    }
+
+    fn calculate_notes_visible_height(&self) -> u16 {
+        // Estimate the visible height for notes area based on modal size
+        // This is approximate - in a real implementation you'd pass the actual area size
+        // For now, use a reasonable default that works with typical terminal sizes
+        8 // This accounts for modal borders, header, and other UI elements
+    }
+
+    // UPDATE TODO NOTES
+    fn update_notes(&mut self, id: i32, notes: String) -> Result<(), Box<dyn std::error::Error>> {
+        let db = database::DBtodo::new()?;
+        db.update_notes(id, notes.clone())?;
+
+        // Update local state
+        if let Some(todo) = self.todos.iter_mut().find(|t| t.id == id as usize) {
+            todo.notes = notes.clone();
+        }
+
+        // Update selected todo if it matches
+        if let Some(selected_todo) = &mut self.selected_todo {
+            if selected_todo.id == id as usize {
+                selected_todo.notes = notes;
+            }
+        }
+
         Ok(())
     }
 
@@ -254,13 +326,21 @@ impl App {
     }
 
     fn select_current(&mut self) {
-        if let Some(filtered_index) = self.state.selected() {
-            if filtered_index < self.filtered_indices.len() {
-                let original_index = self.filtered_indices[filtered_index];
-                if original_index < self.todos.len() {
-                    self.selected_todo = Some(self.todos[original_index].clone());
-                    self.show_modal = true;
+        if let Some(index) = self.state.selected() {
+            // If we have filtered indices, map the selection index through filtered_indices
+            let actual_index = if !self.filtered_indices.is_empty() {
+                if index < self.filtered_indices.len() {
+                    self.filtered_indices[index]
+                } else {
+                    return; // Invalid index
                 }
+            } else {
+                index
+            };
+
+            if actual_index < self.todos.len() {
+                self.selected_todo = Some(self.todos[actual_index].clone());
+                self.show_modal = true;
             }
         }
     }
@@ -270,6 +350,11 @@ impl App {
         self.selected_todo = None;
         self.show_priority_modal = false;
         self.show_main_menu_modal = false;
+        self.editing_notes = false;
+        self.notes_input.unfocus();
+        self.notes_input.value.clear();
+        self.notes_scroll_offset = 0;
+        self.notes_preview_mode = false;
 
         // Re-apply filter if there's text in the search input
         if !self.fuzzy_search.input.value.is_empty() {
@@ -311,8 +396,7 @@ async fn main() -> Result<(), io::Error> {
     // Create the configs
     let _ = configs::AppConfigs::create_default_config();
 
-    // Initiate the base configs the user can tweak
-    let _user_settings = settings::settings::AppConfig::create_default_config();
+    // Backup the existing TODOS
 
     let cli = Cli::parse();
 
@@ -332,6 +416,40 @@ async fn main() -> Result<(), io::Error> {
         loop {
             terminal.draw(|f| draw_ui(f, &mut app))?;
             if let Event::Key(key) = event::read()? {
+                // Handle notes editing input
+                if app.editing_notes {
+                    match key.code {
+                        KeyCode::Esc => {
+                            // Save notes and exit editing mode
+                            if let Some(todo) = &app.selected_todo {
+                                let _ =
+                                    app.update_notes(todo.id as i32, app.notes_input.value.clone());
+                            }
+                            app.editing_notes = false;
+                            app.notes_input.unfocus();
+                        }
+                        KeyCode::PageUp => {
+                            app.scroll_notes_up();
+                        }
+                        KeyCode::PageDown => {
+                            let visible_height = app.calculate_notes_visible_height();
+                            let max_lines = app.notes_input.value.lines().count() as u16;
+                            app.scroll_notes_down(max_lines, visible_height);
+                        }
+                        KeyCode::Tab => {
+                            // Toggle between edit and preview mode
+                            app.notes_preview_mode = !app.notes_preview_mode;
+                        }
+                        _ => {
+                            app.notes_input.handle_event(&Event::Key(key));
+                            // Auto-scroll to keep cursor visible
+                            let visible_height = app.calculate_notes_visible_height();
+                            app.auto_scroll_to_cursor(visible_height);
+                        }
+                    }
+                    continue;
+                }
+
                 if app.fuzzy_search.input.active {
                     if key.code == KeyCode::Enter {
                         app.fuzzy_search.input.unfocus();
@@ -446,7 +564,29 @@ async fn main() -> Result<(), io::Error> {
                         // Force a full refresh from DB to ensure consistency
                         app.load_todo(todo_id);
                     }
-                    //////
+
+                    // Start editing notes
+                    KeyCode::Char('N') if app.show_modal => {
+                        if let Some(todo) = &app.selected_todo {
+                            app.editing_notes = true;
+                            app.notes_input.value = todo.notes.clone();
+                            app.notes_input.focus();
+                            app.notes_scroll_offset = 0; // Reset scroll when starting to edit
+                        }
+                    }
+
+                    // Scroll notes in read-only mode
+                    KeyCode::PageUp if app.show_modal && !app.editing_notes => {
+                        app.scroll_notes_up();
+                    }
+                    KeyCode::PageDown if app.show_modal && !app.editing_notes => {
+                        if let Some(todo) = &app.selected_todo {
+                            let visible_height = app.calculate_notes_visible_height();
+                            let max_lines = todo.notes.lines().count() as u16 + 2; // +2 for header lines
+                            app.scroll_notes_down(max_lines, visible_height);
+                        }
+                    }
+
                     KeyCode::Char('d') => {
                         if let Some(selected) = app.state.selected() {
                             if selected < app.todos.len() {
@@ -575,6 +715,12 @@ async fn main() -> Result<(), io::Error> {
         )?;
         terminal.show_cursor()?;
     }
+    //
+    // Sync with Github
+    else if cli.github {
+        println!("Syncing with Github...");
+        sync::handle_github_sync();
+    }
     // Append subtask to already existing TODO
     else if !cli.subtasks.is_empty() {
         for (id, text) in &cli.subtasks {
@@ -586,11 +732,29 @@ async fn main() -> Result<(), io::Error> {
     }
     // Import todos from excel file
     else if let Some(file_path) = cli.import {
-        let _workbook = xls::import_todos(&file_path);
+        // Check the file path and extension
+        if file_path.ends_with(".xlsx") {
+            let _workbook = import_export::xls::import_todos(&file_path);
+        } else {
+            import_export::json::import_from_json(&file_path);
+        }
     }
-    // Export TODOs into Excel File
+    // Export TODOs/
     else if cli.export {
-        let _workbook = xls::export_todos();
+        println!("Export options:");
+        println!("1. JSON");
+        println!("2. Excel");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+
+        if input == "1" {
+            let _workbook = import_export::json::export_to_json();
+        } else if input == "2" {
+            let _workbook = import_export::xls::export_todos_xls();
+        } else {
+            println!("Invalid option");
+        }
     }
     // PROMPT GEMINI
     else if let Some(prompt) = cli.prompt {
@@ -667,7 +831,7 @@ async fn main() -> Result<(), io::Error> {
     // Clear all todos
     else if cli.clear {
         match arguments::delete_todo::clear_todos() {
-            Ok(_) => println!("Todos deleted successfully!"),
+            Ok(_) => return Ok(()),
             Err(e) => eprintln!("Error deleting todos: {}", e),
         }
     }

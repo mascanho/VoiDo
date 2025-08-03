@@ -21,9 +21,6 @@ pub fn add_todo(
     let priority = priority.unwrap_or_else(|| "normal".to_string());
     let priority = priority.to_lowercase();
     // Uppercase only the first letter
-    if priority != "low" && priority != "medium" && priority != "high" {
-        return Err("Priority must be 'medium', 'high', or 'low'.".into());
-    }
     let priority = priority
         .chars()
         .next()
@@ -53,6 +50,13 @@ pub fn add_todo(
         .to_string()
         + &topic[1..];
 
+    // Format topic with "..." if it goes above the length
+    let topic = if topic.len() > 15 {
+        format!("{}...", &topic[..15])
+    } else {
+        topic
+    };
+
     // Ensure the text first chartacter is always capital cased
     let text = text
         .chars()
@@ -74,10 +78,6 @@ pub fn add_todo(
         .to_ascii_uppercase()
         .to_string()
         + &desc[1..];
-
-    // Handle subtasks
-
-    println!("Subtasks: {:?}", subtasks);
 
     // handle subtasks
     let subtasks = subtasks
@@ -103,6 +103,7 @@ pub fn add_todo(
         status: "Pending".to_string(),
         owner,
         subtasks,
+        notes: String::new(), // Initialize notes as empty string
     };
 
     db.add_todo(&new_todo)?;

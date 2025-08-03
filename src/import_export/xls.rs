@@ -4,11 +4,11 @@ use crate::{
     arguments::models::{Subtask, Todo},
     database::DBtodo,
 };
-use calamine::{Data, DataType, Reader, Xlsx, open_workbook};
+use calamine::{open_workbook, Data, DataType, Reader, Xlsx};
 use rusqlite::params;
 use xlsxwriter::*;
 
-pub fn export_todos() -> Result<(), XlsxError> {
+pub fn export_todos_xls() -> Result<(), Box<dyn std::error::Error>> {
     let db = DBtodo::new().expect("Failed to initialize database");
     let todos = db.get_todos().expect("Failed to get todos");
 
@@ -34,6 +34,7 @@ pub fn export_todos() -> Result<(), XlsxError> {
         "DUE DATE".to_string(),
         "STATUS".to_string(),
         "OWNER".to_string(),
+        "NOTES".to_string(),
     ];
 
     // Add generic subtask headers - using owned Strings
@@ -78,10 +79,11 @@ pub fn export_todos() -> Result<(), XlsxError> {
         worksheet.write_string(row, 6, &get_due_date(&todo.due), None)?;
         worksheet.write_string(row, 7, &get_value(&todo.status), None)?;
         worksheet.write_string(row, 8, &get_value(&todo.owner), None)?;
+        worksheet.write_string(row, 9, &get_value(&todo.notes), None)?;
 
         // Write subtasks
         for (col_offset, subtask) in todo.subtasks.iter().enumerate() {
-            worksheet.write_string(row, 9 + col_offset as u16, &get_value(&subtask.text), None)?;
+            worksheet.write_string(row, 10 + col_offset as u16, &get_value(&subtask.text), None)?;
         }
     }
 
@@ -89,6 +91,7 @@ pub fn export_todos() -> Result<(), XlsxError> {
     println!("\n🤖 Todos exported to VoiDo - Todos Export.xlsx\n");
     Ok(())
 }
+
 // TODO: Add support for Appending TODOS to the existing ones in the DB
 // IMPORT TODOs
 pub fn import_todos(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -148,22 +151,23 @@ pub fn import_todos(file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let due = parse_cell(&row[6]);
         let status = parse_cell(&row[7]);
         let owner = parse_cell(&row[8]);
+        let notes = parse_cell(&row[9]);
 
         // Insert todo
         tx.execute(
-            "INSERT INTO todos (id, priority, topic, text, desc, date_added, due, status, owner) 
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO todos (id, priority, topic, text, desc, date_added, due, status, owner, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
-                id, priority, topic, text, desc, date_added, due, status, owner
+                id, priority, topic, text, desc, date_added, due, status, owner, notes
             ],
         )?;
 
-        // Parse and insert subtasks (columns 9+)
-        for (subtask_num, cell) in row.iter().skip(9).enumerate() {
+        // Parse and insert subtasks (columns 10+)
+        for (subtask_num, cell) in row.iter().skip(10).enumerate() {
             let text = parse_cell(cell);
             if !text.is_empty() {
                 tx.execute(
-                    "INSERT INTO subtasks (todo_id, text, status) 
+                    "INSERT INTO subtasks (todo_id, text, status)
                      VALUES (?1, ?2, ?3)",
                     params![id, text, "Pending"], // Default status
                 )?;
