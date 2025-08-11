@@ -25,7 +25,7 @@ pub struct Subtask {
 }
 
 #[derive(Debug, Parser)]
-#[command(name = "Todo App")]
+#[command(name = "VoiDo")]
 #[command(version = "1.0")]
 #[command(about = "A simple todo application", long_about = None)]
 pub struct Cli {
