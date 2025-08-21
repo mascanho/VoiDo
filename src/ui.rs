@@ -170,15 +170,15 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
     let table = Table::new(
         rows,
         [
-            Constraint::Length(5),  // ID
-            Constraint::Min(10),    // PRIORITY
-            Constraint::Min(12),    // TOPIC
-            Constraint::Fill(35),   // TODO
-            Constraint::Length(8),  // SUBs
-            Constraint::Length(10), // CREATED
-            Constraint::Length(10), // DUE
-            Constraint::Min(10),    // STATUS
-            Constraint::Min(10),    // OWNER
+            Constraint::Length(5),  // ID (tiny, fixed)
+            Constraint::Length(9),  // PRIORITY (short text, fixed enough)
+            Constraint::Min(10),    // TOPIC (short phrases, expand if room)
+            Constraint::Fill(3),    // TODO (long text, gets majority of space)
+            Constraint::Length(6),  // SUBs (tiny numbers, fixed)
+            Constraint::Length(12), // CREATED (YYYY-MM-DD)
+            Constraint::Length(12), // DUE (YYYY-MM-DD)
+            Constraint::Min(10),    // STATUS (labels like "In Progress")
+            Constraint::Min(10),    // OWNER (names, can expand)
         ],
     )
     .header(
