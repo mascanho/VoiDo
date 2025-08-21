@@ -6,17 +6,17 @@ use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use data::sample_todos;
 use ratatui::widgets::{ListState, TableState};
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
-    Frame, Terminal,
 };
 use search::{FuzzySearch, InputField};
 use std::io;
@@ -350,6 +350,7 @@ impl App {
         self.selected_todo = None;
         self.show_priority_modal = false;
         self.show_main_menu_modal = false;
+        self.show_delete_confirmation = false;
         self.editing_notes = false;
         self.notes_input.unfocus();
         self.notes_input.value.clear();
@@ -698,7 +699,11 @@ async fn main() -> Result<(), io::Error> {
                         }
                     }
                     KeyCode::Esc | KeyCode::Char('h') => {
-                        if app.show_modal || app.show_priority_modal || app.show_main_menu_modal {
+                        if app.show_modal
+                            || app.show_priority_modal
+                            || app.show_main_menu_modal
+                            || app.show_delete_confirmation
+                        {
                             app.close_modal();
                         }
                     }
@@ -812,7 +817,7 @@ async fn main() -> Result<(), io::Error> {
     // Delete todo
     else if let Some(id) = cli.delete {
         match arguments::delete_todo::remove_todo(id) {
-            Ok(_) => println!("✅ Todo deleted successfully!"),
+            Ok(_) => {}
             Err(e) => eprintln!("Error deleting todo: {}", e),
         }
     }

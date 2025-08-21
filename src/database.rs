@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use directories::BaseDirs;
-use rusqlite::{params, Connection, Result};
+use rusqlite::{Connection, Result, params};
 
 use crate::arguments::models::{Subtask, Todo};
 
@@ -151,6 +151,11 @@ impl DBtodo {
     }
     // DELETE TODO BASED ON ID
     pub fn delete_todo(&self, id: i32) -> Result<(), Box<dyn Error>> {
+        // First delete all subtasks associated with this todo
+        self.connection
+            .execute("DELETE FROM subtasks WHERE todo_id = ?", params![id])?;
+
+        // Then delete the todo itself
         let changes = self
             .connection
             .execute("DELETE FROM todos WHERE id = ?", params![id])?;
