@@ -4,17 +4,17 @@ use crate::modals::{
     draw_todo_modal,
 };
 use crate::search::InputField;
-use crate::{database, App};
+use crate::{App, database};
 use ratatui::layout::Alignment;
 use ratatui::prelude::Stylize;
 use ratatui::text::Span;
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::Line,
     widgets::{Block, Borders, Paragraph, Row, Table, Wrap},
-    Frame, Terminal,
 };
 
 // MAIN UI
@@ -172,7 +172,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         [
             Constraint::Length(5),  // ID
             Constraint::Min(10),    // PRIORITY
-            Constraint::Min(18),    // TOPIC
+            Constraint::Min(12),    // TOPIC
             Constraint::Fill(35),   // TODO
             Constraint::Length(8),  // SUBs
             Constraint::Length(10), // CREATED
