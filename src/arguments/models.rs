@@ -27,13 +27,13 @@ pub struct Subtask {
 #[derive(Debug, Parser)]
 #[command(name = "VoiDo")]
 #[command(version = "1.0")]
-#[command(about = "A TODO CLI & SECOND BRAIN BUILT WITH RUST", long_about = None)]
+#[command(about = "A powerful and intuitive command-line (CLI) todo application built with Rust, supercharged with AI capabilities.", long_about = None)]
 pub struct Cli {
     /// List all todos in a terminal UI
     #[arg(short, long)]
     pub list: bool,
 
-    // Export todos indo Excel file
+    /// Export todos into an Excel file
     #[arg(short = 'E', long)]
     pub export: bool,
 
@@ -41,7 +41,7 @@ pub struct Cli {
     #[arg(short = 'a', long, value_name = "TEXT", num_args = 1.., value_delimiter = ' ')]
     pub add: Option<Vec<String>>,
 
-    /// PASS A LONG DESCRIPTION TO THE ARGUMENT
+    /// A more detailed description for the todo.
     /// Ownder of the todo (requires --add)
     #[arg(short = 'w', long, value_name = "DESCRIPTION", num_args = 1.., value_delimiter = ' ', requires = "add")]
     pub desc: Option<Vec<String>>,
@@ -78,31 +78,31 @@ pub struct Cli {
     #[arg(short = 'C', long)]
     pub clear: bool,
 
-    /// Show all options
+    /// Show available command-line arguments and options.
     #[arg(short = 'S', long)]
     pub show: bool,
 
-    /// OWNER NAME
+    /// The person responsible for the task.
     #[arg(short, long, value_name = "OWNER", requires = "add")]
     pub owner: Option<String>,
 
-    /// DUE DATE
+    /// A due date for the task.
     #[arg(short = 'd', long, value_name = "DUE DATE", requires = "add")]
     pub due: Option<String>,
 
-    /// pass the API key credentrials
+    /// Set your Google Gemini API key.
     #[arg(short = 'k', long, value_name = "API_KEY")]
     pub apikey: Option<String>,
 
-    /// ASK GEMINI FOR TODO DETAILS
+    /// Get AI-powered task suggestions from Google Gemini.
     #[arg(short = 'g', long, value_name = "PROMPT")]
     pub gemini: Option<String>,
 
-    /// Version Check
+    /// Display the current version of VoiDo.
     #[arg(short, long)]
     pub release: bool,
 
-    /// Clear the databse
+    /// Flush (clear) the entire database.
     #[arg(short, long)]
     pub flush: bool,
 
@@ -110,7 +110,7 @@ pub struct Cli {
     #[arg(short = 'I', long, value_name = "FILE")]
     pub import: Option<String>,
 
-    // SYNC WITH GITHUG REPO
+    /// Synchronize todos with a GitHub repository.
     #[arg(short = 'G', long, value_name = "GITHUB")]
     pub github: bool,
 
