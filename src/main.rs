@@ -762,7 +762,7 @@ async fn main() -> Result<(), io::Error> {
         }
     }
     // PROMPT GEMINI
-    else if let Some(prompt) = cli.prompt {
+    else if let Some(prompt) = cli.gemini {
         match ai::ask_gemini(prompt).await {
             Ok(response) => {
                 println!("");

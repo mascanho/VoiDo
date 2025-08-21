@@ -433,7 +433,7 @@ pub fn draw_delete_confirmation(f: &mut Frame, area: Rect) {
         .style(Style::default().bg(background))
         .border_style(Style::default().fg(border).add_modifier(Modifier::BOLD));
 
-    let area = centered_rect(45, 25, area);
+    let area = centered_rect(100, 100, area);
     f.render_widget(block, area);
 
     let inner_area = area.inner(Margin {

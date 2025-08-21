@@ -27,7 +27,7 @@ pub struct Subtask {
 #[derive(Debug, Parser)]
 #[command(name = "VoiDo")]
 #[command(version = "1.0")]
-#[command(about = "A simple todo application", long_about = None)]
+#[command(about = "A TODO CLI & SECOND BRAIN BUILT WITH RUST", long_about = None)]
 pub struct Cli {
     /// List all todos in a terminal UI
     #[arg(short, long)]
@@ -94,9 +94,9 @@ pub struct Cli {
     #[arg(short = 'k', long, value_name = "API_KEY")]
     pub apikey: Option<String>,
 
-    /// ASK GEMINI
-    #[arg(short = 'A', long, value_name = "PROMPT")]
-    pub prompt: Option<String>,
+    /// ASK GEMINI FOR TODO DETAILS
+    #[arg(short = 'g', long, value_name = "PROMPT")]
+    pub gemini: Option<String>,
 
     /// Version Check
     #[arg(short, long)]
